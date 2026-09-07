@@ -46,6 +46,27 @@ frontend/dist/
 .coverage
 htmlcov/
 
+# CDP browser profiles (headless testing artifacts)
+.edge-cdp-profile/
+.edge-cdp-profile2/
+
+# QA screenshots and test artifacts
+qa-screenshots/
+
+# Qoder IDE config
+.qoder/
+
+# Debug/check scripts
+_cdp_check*.js
+
+# Verification databases (local testing only)
+backend/*_verify.db
+
+# Root-level temporary screenshots
+0*-*.png
+assistant-answer*.png
+assistant-welcome*.png
+
 # Misc
 *.bak
 *.tmp

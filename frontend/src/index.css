@@ -1,3 +1,278 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  /* ── Light theme ──────────────────────────────────────────────────────
+     Clean off-white page with white cards and sidebar.
+     Professional agricultural SaaS appearance. */
+
+  --agri-page-bg: 248 250 252;
+  --agri-surface: 255 255 255;
+  --agri-nav: 255 255 255;
+  --agri-elevated: 255 255 255;
+
+  /* Brand hierarchy: deep field green → fresh leaf green. */
+  --agri-field-50: 240 253 244;
+  --agri-field-100: 220 252 231;
+  --agri-field-200: 187 247 208;
+  --agri-field-300: 134 239 172;
+  --agri-field-400: 74 222 128;
+  --agri-field-500: 34 197 94;
+  --agri-field-600: 22 163 74;
+  --agri-field-700: 21 128 61;
+  --agri-field-800: 22 101 52;
+  --agri-field-900: 20 83 45;
+  --agri-field-950: 5 46 22;
+
+  --agri-leaf-50: 247 255 231;
+  --agri-leaf-100: 235 251 185;
+  --agri-leaf-200: 217 249 157;
+  --agri-leaf-300: 190 242 100;
+  --agri-leaf-400: 163 230 53;
+  --agri-leaf-500: 132 204 22;
+  --agri-leaf-600: 101 163 17;
+  --agri-leaf-700: 77 124 15;
+  --agri-leaf-800: 63 98 18;
+  --agri-leaf-900: 54 83 18;
+  --agri-leaf-950: 26 46 5;
+
+  /* True-neutral greys — consistent across both themes for borders/text.
+     50 = near-white, 950 = near-black. */
+  --agri-soil-50: 248 250 252;
+  --agri-soil-100: 241 245 249;
+  --agri-soil-200: 226 232 240;
+  --agri-soil-300: 203 213 225;
+  --agri-soil-400: 148 163 184;
+  --agri-soil-500: 100 116 139;
+  --agri-soil-600: 71 85 105;
+  --agri-soil-700: 51 65 85;
+  --agri-soil-800: 30 41 59;
+  --agri-soil-900: 15 23 42;
+  --agri-soil-950: 2 6 23;
+
+  /* Semantic status: amber/warm. */
+  --agri-sun-50: 255 251 235;
+  --agri-sun-100: 254 243 199;
+  --agri-sun-200: 253 230 138;
+  --agri-sun-300: 252 211 77;
+  --agri-sun-400: 251 191 36;
+  --agri-sun-500: 245 158 11;
+  --agri-sun-600: 217 119 6;
+  --agri-sun-700: 180 83 9;
+  --agri-sun-800: 146 64 14;
+  --agri-sun-900: 120 53 15;
+  --agri-sun-950: 69 26 3;
+
+  /* Semantic status: blue/sky. */
+  --agri-sky-50: 239 246 255;
+  --agri-sky-100: 219 234 254;
+  --agri-sky-200: 191 219 254;
+  --agri-sky-300: 147 197 253;
+  --agri-sky-400: 96 165 250;
+  --agri-sky-500: 59 130 246;
+  --agri-sky-600: 37 99 235;
+  --agri-sky-700: 29 78 216;
+  --agri-sky-800: 30 64 175;
+  --agri-sky-900: 30 58 138;
+  --agri-sky-950: 15 30 80;
+
+  /* Semantic status: teal/water (irrigation, humidity). */
+  --agri-teal-50: 240 253 250;
+  --agri-teal-100: 204 251 241;
+  --agri-teal-200: 153 246 228;
+  --agri-teal-300: 94 234 212;
+  --agri-teal-400: 45 212 191;
+  --agri-teal-500: 20 184 166;
+  --agri-teal-600: 13 148 136;
+  --agri-teal-700: 15 118 110;
+  --agri-teal-800: 17 94 89;
+  --agri-teal-900: 19 78 74;
+  --agri-teal-950: 4 47 46;
+
+  /* Semantic status: red/rust. */
+  --agri-rust-50: 254 242 242;
+  --agri-rust-100: 254 226 226;
+  --agri-rust-200: 254 202 202;
+  --agri-rust-300: 252 165 165;
+  --agri-rust-400: 248 113 113;
+  --agri-rust-500: 239 68 68;
+  --agri-rust-600: 220 38 38;
+  --agri-rust-700: 185 28 28;
+  --agri-rust-800: 153 27 27;
+  --agri-rust-900: 127 29 29;
+  --agri-rust-950: 69 10 10;
+
+  /* AI/indigo accent palette. */
+  --agri-ai-50: 238 242 255;
+  --agri-ai-100: 224 231 255;
+  --agri-ai-200: 199 210 254;
+  --agri-ai-300: 165 180 252;
+  --agri-ai-400: 129 140 248;
+  --agri-ai-500: 99 102 241;
+  --agri-ai-600: 79 70 229;
+  --agri-ai-700: 67 56 202;
+  --agri-ai-800: 55 48 163;
+  --agri-ai-900: 49 46 129;
+  --agri-ai-950: 30 27 75;
+}
+
+/* ── Dark theme ──────────────────────────────────────────────────────────
+   Deep navy/charcoal — NOT pure black, NOT saturated blue.
+   Main background: #0B1220. Sidebar: #0D1421. Cards: #111827.
+   Elevated surfaces: #172033. Soil scale is redefined so high numbers
+   = light (for text on dark bg); low numbers = dark neutral surfaces. */
+.dark {
+  --agri-page-bg: 11 18 32;
+  --agri-surface: 17 24 39;
+  --agri-nav: 13 20 33;
+  --agri-elevated: 23 32 51;
+
+  /* Brand greens — brighter range for dark-bg contrast. */
+  --agri-field-50: 5 46 22;
+  --agri-field-100: 20 83 45;
+  --agri-field-200: 22 101 52;
+  --agri-field-300: 21 128 61;
+  --agri-field-400: 34 197 94;
+  --agri-field-500: 74 222 128;
+  --agri-field-600: 34 197 94;
+  --agri-field-700: 22 163 74;
+  --agri-field-800: 187 247 208;
+  --agri-field-900: 220 252 231;
+  --agri-field-950: 240 253 244;
+
+  --agri-leaf-50: 26 46 5;
+  --agri-leaf-100: 63 98 18;
+  --agri-leaf-200: 77 124 15;
+  --agri-leaf-300: 132 204 22;
+  --agri-leaf-400: 163 230 53;
+  --agri-leaf-500: 190 242 100;
+  --agri-leaf-600: 217 249 157;
+  --agri-leaf-700: 235 251 185;
+  --agri-leaf-800: 247 255 231;
+  --agri-leaf-900: 252 255 245;
+  --agri-leaf-950: 255 255 252;
+
+  /* Dark-mode soil: neutral charcoal ramp (desaturated vs slate).
+     50-300 = backgrounds/borders, 400-950 = text (progressively lighter). */
+  --agri-soil-50: 11 18 32;
+  --agri-soil-100: 17 24 39;
+  --agri-soil-200: 28 36 50;
+  --agri-soil-300: 44 53 68;
+  --agri-soil-400: 105 115 129;
+  --agri-soil-500: 148 158 170;
+  --agri-soil-600: 176 185 196;
+  --agri-soil-700: 203 210 219;
+  --agri-soil-800: 224 229 236;
+  --agri-soil-900: 241 244 249;
+  --agri-soil-950: 248 250 252;
+
+  --agri-sun-50: 69 26 3;
+  --agri-sun-100: 120 53 15;
+  --agri-sun-200: 146 64 14;
+  --agri-sun-300: 180 83 9;
+  --agri-sun-400: 245 158 11;
+  --agri-sun-500: 251 191 36;
+  --agri-sun-600: 252 211 77;
+  --agri-sun-700: 253 230 138;
+  --agri-sun-800: 254 243 199;
+  --agri-sun-900: 255 249 235;
+  --agri-sun-950: 255 252 245;
+
+  --agri-sky-50: 15 30 80;
+  --agri-sky-100: 30 58 138;
+  --agri-sky-200: 29 78 216;
+  --agri-sky-300: 37 99 235;
+  --agri-sky-400: 59 130 246;
+  --agri-sky-500: 96 165 250;
+  --agri-sky-600: 147 197 253;
+  --agri-sky-700: 191 219 254;
+  --agri-sky-800: 219 234 254;
+  --agri-sky-900: 239 246 255;
+  --agri-sky-950: 248 250 255;
+
+  --agri-teal-50: 4 47 46;
+  --agri-teal-100: 19 78 74;
+  --agri-teal-200: 17 94 89;
+  --agri-teal-300: 15 118 110;
+  --agri-teal-400: 20 184 166;
+  --agri-teal-500: 45 212 191;
+  --agri-teal-600: 20 184 166;
+  --agri-teal-700: 13 148 136;
+  --agri-teal-800: 153 246 228;
+  --agri-teal-900: 204 251 241;
+  --agri-teal-950: 240 253 250;
+
+  --agri-rust-50: 69 10 10;
+  --agri-rust-100: 127 29 29;
+  --agri-rust-200: 153 27 27;
+  --agri-rust-300: 185 28 28;
+  --agri-rust-400: 239 68 68;
+  --agri-rust-500: 248 113 113;
+  --agri-rust-600: 252 165 165;
+  --agri-rust-700: 254 202 202;
+  --agri-rust-800: 254 226 226;
+  --agri-rust-900: 254 242 242;
+  --agri-rust-950: 255 250 250;
+
+  --agri-ai-50: 30 27 75;
+  --agri-ai-100: 49 46 129;
+  --agri-ai-200: 55 48 163;
+  --agri-ai-300: 67 56 202;
+  --agri-ai-400: 99 102 241;
+  --agri-ai-500: 129 140 248;
+  --agri-ai-600: 165 180 252;
+  --agri-ai-700: 199 210 254;
+  --agri-ai-800: 224 231 255;
+  --agri-ai-900: 238 242 255;
+  --agri-ai-950: 245 247 255;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply min-w-0 font-sans antialiased;
+    background-color: rgb(var(--agri-page-bg));
+    color: rgb(var(--agri-soil-900));
+  }
+
+  .dark body {
+    color: rgb(var(--agri-soil-900));
+  }
+
+  ::selection {
+    @apply bg-field-200 text-field-900;
+  }
+
+  .dark ::selection {
+    @apply bg-field-800 text-field-100;
+  }
+
+  /* Keep focus-ring offset matching the page background in dark mode. */
+  .dark {
+    --tw-ring-offset-color: rgb(var(--agri-page-bg));
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,1 +1,42 @@
-# Pydantic schemas for request/response validation
+from app.schemas.common import ErrorDetail, ErrorResponse
+from app.schemas.entities import (
+    ActivityHistoryRead,
+    ConversationCreate,
+    ConversationRead,
+    DiagnosisScanCreate,
+    DiagnosisScanRead,
+    DiseaseRead,
+    FieldCreate,
+    FieldRead,
+    FieldUpdate,
+    MessageCreate,
+    MessageRead,
+    NotificationRead,
+    RecommendationCreate,
+    RecommendationRead,
+    RecommendationUpdate,
+    UserRead,
+    UserUpdate,
+)
+
+__all__ = [
+    "ActivityHistoryRead",
+    "ConversationCreate",
+    "ConversationRead",
+    "DiagnosisScanCreate",
+    "DiagnosisScanRead",
+    "DiseaseRead",
+    "ErrorDetail",
+    "ErrorResponse",
+    "FieldCreate",
+    "FieldRead",
+    "FieldUpdate",
+    "MessageCreate",
+    "MessageRead",
+    "NotificationRead",
+    "RecommendationCreate",
+    "RecommendationRead",
+    "RecommendationUpdate",
+    "UserRead",
+    "UserUpdate",
+]
