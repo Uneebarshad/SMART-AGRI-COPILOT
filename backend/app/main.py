@@ -1,3 +1,15 @@
+import sys
+from pathlib import Path
+
+# Ensure the backend/ directory is on sys.path so that absolute imports
+# like "from app.config import settings" resolve correctly when this module
+# is imported from the repository root by Vercel's Python serverless runtime.
+# Locally (uvicorn from inside backend/), backend/ is already on sys.path,
+# making this a harmless no-op.
+_backend_dir = str(Path(__file__).resolve().parent.parent)
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
 import logging
 from contextlib import asynccontextmanager
 
