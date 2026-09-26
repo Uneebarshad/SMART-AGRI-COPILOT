@@ -3,6 +3,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useT } from '../i18n/useT';
 import { useConversation } from '../hooks/useConversation';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import { ButtonLink, ErrorState, Skeleton } from '../components/ui';
 import { AssistantHeader } from '../components/assistant/AssistantHeader';
 import { Composer } from '../components/assistant/Composer';
@@ -53,13 +55,21 @@ const CAPABILITIES = [
  */
 export function AssistantPage() {
   const { conversationId: routeConversationId } = useParams();
-  const { t } = useT();
+  const { t, lang } = useT();
   const navigate = useNavigate();
   const location = useLocation();
   const { state, conversationTitle, loadStatus, send, retry, reset, retryLoad } = useConversation(
     routeConversationId,
   );
   usePageTitle(t('assistant.title'));
+
+  // Phase-1 voice: browser STT feeds the existing text send() flow; browser
+  // TTS speaks assistant replies. Both are presentation layers only.
+  const speech = useSpeechRecognition(lang);
+  const { isSupported: ttsSupported, isSpeaking, speak, stop: stopSpeak } = useTextToSpeech(lang);
+  const [autoSpeak, setAutoSpeak] = useState(false);
+  const [spokenMessageId, setSpokenMessageId] = useState(null);
+  const lastAssistantIdRef = useRef(null);
 
   const [photo, setPhoto] = useState(null);
   const photoRef = useRef(null);
@@ -100,6 +110,30 @@ export function AssistantPage() {
     return () => cancelAnimationFrame(frame);
   }, [state.messages.length, state.sendStatus, routeConversationId]);
 
+  // Auto-speak only NEW assistant replies (never historical or first-load
+  // messages), and only when the user has opted in via the header toggle.
+  useEffect(() => {
+    const assistantMessages = state.messages.filter(
+      (message) => message.role === 'assistant' && message.status !== 'failed',
+    );
+    const latest = assistantMessages[assistantMessages.length - 1];
+    if (!latest) return;
+    const isNew = lastAssistantIdRef.current !== null;
+    const alreadySeen = latest.id === lastAssistantIdRef.current;
+    lastAssistantIdRef.current = latest.id;
+    if (autoSpeak && isNew && !alreadySeen) {
+      setSpokenMessageId(latest.id);
+      speak(latest.content);
+    }
+  }, [state.messages, autoSpeak, speak]);
+
+  // Reset the auto-speak tracker whenever the conversation route changes so a
+  // resumed conversation never re-speaks its last message on arrival.
+  useEffect(() => {
+    lastAssistantIdRef.current = null;
+    setSpokenMessageId(null);
+  }, [routeConversationId]);
+
   const isEmpty = state.messages.length === 0 && state.sendStatus === 'idle';
 
   const handleAttach = () => fileInputRef.current?.click();
@@ -134,9 +168,37 @@ export function AssistantPage() {
 
   const handleNewChat = () => {
     reset();
+    stopSpeak();
+    if (speech.isListening) speech.stop();
+    lastAssistantIdRef.current = null;
+    setSpokenMessageId(null);
     if (routeConversationId) {
       navigate('/assistant', { replace: true });
     }
+  };
+
+  // Start/stop dictation from the composer mic; stop playback first so the
+  // microphone does not capture the speaker output.
+  const handleMicToggle = () => {
+    if (!speech.isListening) stopSpeak();
+    speech.toggle();
+  };
+
+  // Tap a bubble's speaker to hear that one response; tap again to stop.
+  const handleSpeak = (message) => {
+    if (spokenMessageId === message.id && isSpeaking) {
+      stopSpeak();
+      return;
+    }
+    setSpokenMessageId(message.id);
+    speak(message.content);
+  };
+
+  const handleToggleAutoSpeak = () => {
+    setAutoSpeak((current) => {
+      if (current) stopSpeak();
+      return !current;
+    });
   };
 
   const greetingMessage = {
@@ -152,6 +214,7 @@ export function AssistantPage() {
       <AssistantHeader
         title={conversationTitle ?? t('assistant.title')}
         onNewChat={handleNewChat}
+        voice={{ supported: ttsSupported, autoSpeak, onToggle: handleToggleAutoSpeak }}
       />
 
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col">
@@ -232,7 +295,14 @@ export function AssistantPage() {
               ) : (
                 <ul className="flex flex-col gap-4">
                   {state.messages.map((message) => (
-                    <MessageBubble key={message.id} message={message} onRetry={retry} />
+                    <MessageBubble
+                      key={message.id}
+                      message={message}
+                      onRetry={retry}
+                      onSpeak={handleSpeak}
+                      speaking={isSpeaking && spokenMessageId === message.id}
+                      speakSupported={ttsSupported}
+                    />
                   ))}
                   {state.sendStatus === 'pending' && <TypingIndicator />}
                 </ul>
@@ -253,6 +323,15 @@ export function AssistantPage() {
           onSend={send}
           onAttach={handleAttach}
           initialValue={prefill}
+          voice={{
+            isSupported: speech.isSupported,
+            isListening: speech.isListening,
+            error: speech.error,
+            interimTranscript: speech.interimTranscript,
+          }}
+          onMicToggle={handleMicToggle}
+          voiceTranscript={speech.transcript}
+          onVoiceTranscriptHandled={speech.resetTranscript}
         />
       </div>
 

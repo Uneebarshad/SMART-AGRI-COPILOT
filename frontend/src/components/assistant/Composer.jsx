@@ -1,11 +1,23 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useT } from '../../i18n/useT';
+import { cn } from '../../lib/cn';
 import { CameraIcon } from '../ui/icons/CameraIcon';
 import { InfoIcon } from '../ui/icons/InfoIcon';
 import { PaperAirplaneIcon } from '../ui/icons/PaperAirplaneIcon';
+import { MicIcon } from '../ui/icons/MicIcon';
 
 const MAX_LENGTH = 2000; // frontend-spec.md §15.4
 const COUNTER_THRESHOLD = MAX_LENGTH - 200;
+
+// Normalized voice-input error codes (from useSpeechRecognition) → i18n keys.
+const VOICE_ERROR_KEYS = {
+  'permission-denied': 'assistant.voice.permissionDenied',
+  'service-denied': 'assistant.voice.micUnavailable',
+  'no-mic': 'assistant.voice.micUnavailable',
+  network: 'assistant.voice.error',
+  'start-failed': 'assistant.voice.error',
+  error: 'assistant.voice.error',
+};
 
 /**
  * Docked composer (frontend-spec.md §6.1/§6.3): auto-growing textarea (4
@@ -13,10 +25,24 @@ const COUNTER_THRESHOLD = MAX_LENGTH - 200;
  * send action. Normal document flow — not fixed — so mobile keyboards push
  * it, and the draft survives language switches (§13.4). `initialValue` seeds
  * the draft once (§6.5 hand-off from the diagnosis result screen). The
- * trailing slot after send stays reserved for a future mic control (§6.6);
- * text is 16 px to prevent iOS zoom (§9.2).
+ * trailing slot after send now hosts the Phase-1 voice input mic (§6.6); it
+ * is a pure input layer — a recognized transcript is dropped into the same
+ * textarea for the user to review before the existing send() flow runs. Text
+ * is 16 px to prevent iOS zoom (§9.2).
+ *
+ * `voice` is an optional snapshot `{ isSupported, isListening, error,
+ * interimTranscript }`; when omitted the mic slot is simply not rendered.
  */
-export function Composer({ disabled = false, onSend, onAttach, initialValue = '' }) {
+export function Composer({
+  disabled = false,
+  onSend,
+  onAttach,
+  initialValue = '',
+  voice = null,
+  onMicToggle,
+  voiceTranscript = '',
+  onVoiceTranscriptHandled,
+}) {
   const { t } = useT();
   const [value, setValue] = useState(initialValue);
   const textareaRef = useRef(null);
@@ -38,6 +64,19 @@ export function Composer({ disabled = false, onSend, onAttach, initialValue = ''
     resize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Move a final voice transcript into the input for review — never
+  // auto-send. The user still presses Send (Phase-1 safety: STT can err).
+  useEffect(() => {
+    if (!voiceTranscript) return;
+    setValue((prev) => {
+      const base = prev.trim();
+      return base ? `${base} ${voiceTranscript}` : voiceTranscript;
+    });
+    requestAnimationFrame(resize);
+    onVoiceTranscriptHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceTranscript]);
 
   const submit = () => {
     if (!canSend) return;
@@ -96,7 +135,51 @@ export function Composer({ disabled = false, onSend, onAttach, initialValue = ''
         >
           <PaperAirplaneIcon className="h-5 w-5 rtl:-scale-x-100" />
         </button>
+        {voice && (
+          <button
+            type="button"
+            onClick={onMicToggle}
+            disabled={!voice.isSupported}
+            aria-pressed={voice.isListening}
+            aria-label={
+              voice.isListening ? t('assistant.voice.stop') : t('assistant.voice.start')
+            }
+            title={
+              !voice.isSupported
+                ? t('assistant.voice.unsupported')
+                : voice.isListening
+                  ? t('assistant.voice.stop')
+                  : t('assistant.voice.start')
+            }
+            className={cn(
+              'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-600',
+              voice.isListening
+                ? 'animate-pulse bg-rust-600 text-white hover:bg-rust-600'
+                : 'text-soil-500 hover:bg-soil-100 hover:text-soil-700 dark:hover:bg-white/5',
+              !voice.isSupported && 'cursor-not-allowed opacity-40',
+            )}
+          >
+            <MicIcon className="h-5 w-5" />
+          </button>
+        )}
       </div>
+      {voice && voice.isSupported && (voice.isListening || voice.error) && (
+        <p
+          className="px-2 text-center text-xs"
+          role="status"
+          aria-live="polite"
+        >
+          {voice.error ? (
+            <span className="font-medium text-rust-700">
+              {t(VOICE_ERROR_KEYS[voice.error] ?? 'assistant.voice.error')}
+            </span>
+          ) : (
+            <span className="text-field-700">
+              {voice.interimTranscript || t('assistant.voice.listening')}
+            </span>
+          )}
+        </p>
+      )}
       {value.length > COUNTER_THRESHOLD && !tooLong && (
         <p className="self-end pe-1 text-xs text-soil-400" aria-hidden="true">
           {value.length}/{MAX_LENGTH}

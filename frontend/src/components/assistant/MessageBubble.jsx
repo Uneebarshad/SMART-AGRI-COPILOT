@@ -4,6 +4,8 @@ import { cn } from '../../lib/cn';
 import { SourcesDisclosure } from './SourcesDisclosure';
 import { AlertTriangleIcon } from '../ui/icons/AlertTriangleIcon';
 import { SproutIcon } from '../ui/icons/SproutIcon';
+import { SpeakerIcon } from '../ui/icons/SpeakerIcon';
+import { SpeakerOffIcon } from '../ui/icons/SpeakerOffIcon';
 
 /**
  * One chat message (frontend-spec.md §6.2). User bubbles are field-tinted and
@@ -12,7 +14,7 @@ import { SproutIcon } from '../ui/icons/SproutIcon';
  * or markdown (§16.4). A failed user message shows the rust treatment and,
  * when retryable, the bubble itself taps to retry (§6.10).
  */
-export function MessageBubble({ message, onRetry }) {
+export function MessageBubble({ message, onRetry, onSpeak, speaking = false, speakSupported = false }) {
   const { t, lang } = useT();
 
   if (message.role === 'user') {
@@ -69,9 +71,36 @@ export function MessageBubble({ message, onRetry }) {
           </p>
           {message.sources?.length > 0 && <SourcesDisclosure sources={message.sources} />}
         </div>
-        {message.createdAt && (
-          <p className="ps-1 text-xs text-soil-500">{formatTime(message.createdAt, lang)}</p>
-        )}
+        <div className="flex w-full items-center justify-between gap-2 px-1">
+          <p className="text-xs text-soil-500">
+            {message.createdAt ? formatTime(message.createdAt, lang) : ''}
+          </p>
+          {speakSupported && (
+            <button
+              type="button"
+              onClick={() => onSpeak?.(message)}
+              aria-pressed={speaking}
+              aria-label={
+                speaking ? t('assistant.voice.stopSpeaking') : t('assistant.voice.speak')
+              }
+              title={
+                speaking ? t('assistant.voice.stopSpeaking') : t('assistant.voice.speak')
+              }
+              className={cn(
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-600',
+                speaking
+                  ? 'bg-field-100 text-field-700 dark:bg-field-900/20'
+                  : 'text-soil-400 hover:bg-soil-100 hover:text-soil-700 dark:hover:bg-white/5',
+              )}
+            >
+              {speaking ? (
+                <SpeakerOffIcon className="h-4 w-4" />
+              ) : (
+                <SpeakerIcon className="h-4 w-4" />
+              )}
+            </button>
+          )}
+        </div>
       </div>
     </li>
   );
