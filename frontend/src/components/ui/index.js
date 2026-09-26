@@ -7,7 +7,7 @@ export { ButtonLink } from './ButtonLink';
 export { SubmitButton } from './SubmitButton';
 export { IconButton } from './IconButton';
 export { Card, CardHeader, CardFooter } from './Card';
-export { TextField } from './TextField';
+export { TextField, PasswordField } from './TextField';
 export { SelectField } from './SelectField';
 export { TextAreaField } from './TextAreaField';
 export { Badge } from './Badge';
