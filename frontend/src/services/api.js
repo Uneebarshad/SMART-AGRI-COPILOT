@@ -221,6 +221,25 @@ export function fetchConversationMessages(conversationId) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Notification endpoints (backend routes/notifications.py)
+// ---------------------------------------------------------------------------
+
+/** Full inbox for the current user, newest first (NotificationRead list). */
+export function fetchNotifications() {
+  return request('/notifications', { timeoutMs: 10000 });
+}
+
+/** Mark a single notification read; returns the updated row. */
+export function markNotificationReadRequest(notificationId) {
+  return request(`/notifications/${notificationId}/read`, { method: 'PATCH' });
+}
+
+/** Mark the whole inbox read; returns `{ updated }`. */
+export function markAllNotificationsReadRequest() {
+  return request('/notifications/read-all', { method: 'PATCH' });
+}
+
 /**
  * Leaf-scan analysis (frontend-spec.md §15.6): multipart POST — the request
  * wrapper detects FormData and lets the browser set the boundary header.

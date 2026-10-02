@@ -23,6 +23,7 @@ const RecommendationsPage = lazy(() => import('./pages/RecommendationsPage'));
 const DiseasesPage = lazy(() => import('./pages/DiseasesPage'));
 const DiseaseDetailPage = lazy(() => import('./pages/DiseaseDetailPage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
@@ -160,7 +161,9 @@ export default function App() {
                   <Route path="recommendations" element={<RecommendationsPage />} />
                   <Route path="diseases" element={<DiseasesPage />} />
                   <Route path="diseases/:id" element={<DiseaseDetailPage />} />
-                  <Route path="history" element={<HistoryPage />} />
+                  <Route path="history" element={<Navigate to="/conversations" replace />} />
+                  <Route path="conversations" element={<HistoryPage />} />
+                  <Route path="notifications" element={<NotificationsPage />} />
                 </Route>
               </Routes>
             </BrowserRouter>

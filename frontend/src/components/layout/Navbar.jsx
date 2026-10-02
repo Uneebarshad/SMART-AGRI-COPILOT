@@ -2,11 +2,13 @@ import { Link } from 'react-router-dom';
 import { cn } from '../../lib/cn';
 import { useT } from '../../i18n/useT';
 import { BrandMark } from './BrandMark';
+import { NotificationBell } from '../notifications/NotificationBell';
 import { MenuIcon } from '../ui/icons/MenuIcon';
 
 /**
- * Mobile top bar (frontend-spec.md §4.4): brand plus the menu trigger.
- * Rendered below `lg` — visibility is controlled by the caller via `className`.
+ * Mobile top bar (frontend-spec.md §4.4): brand, notification bell and the
+ * menu trigger. Rendered below `lg` — visibility is controlled by the caller
+ * via `className`.
  */
 export function Navbar({ className, onMenuOpen }) {
   const { t } = useT();
@@ -23,15 +25,18 @@ export function Navbar({ className, onMenuOpen }) {
             {t('common.brandName')}
           </span>
         </Link>
-        <button
-          type="button"
-          onClick={onMenuOpen}
-          aria-label={t('common.openMenu')}
-          aria-haspopup="dialog"
-          className="flex h-11 w-11 items-center justify-center rounded-md text-soil-700 transition-colors hover:bg-soil-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-500 focus-visible:ring-offset-2"
-        >
-          <MenuIcon className="h-6 w-6" />
-        </button>
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <button
+            type="button"
+            onClick={onMenuOpen}
+            aria-label={t('common.openMenu')}
+            aria-haspopup="dialog"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-soil-700 transition-colors hover:bg-soil-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-500 focus-visible:ring-offset-2"
+          >
+            <MenuIcon className="h-6 w-6" />
+          </button>
+        </div>
       </div>
     </header>
   );

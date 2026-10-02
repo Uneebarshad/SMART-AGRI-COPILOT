@@ -7,6 +7,7 @@ external WeatherAPI service.
 from __future__ import annotations
 
 import json
+import logging
 import time
 import urllib.error
 import urllib.request
@@ -586,14 +587,89 @@ class TestDashboardIntegration:
         assert "weather" in data
         assert "current" in data["weather"]
 
-    def test_dashboard_fallback_on_weather_failure(self, client):
-        """Dashboard should still work even when weather API fails."""
-        with patch("urllib.request.urlopen", side_effect=TimeoutError("timeout")):
-            clear_cache()
-            resp = client.get("/api/dashboard?lang=en")
+    def test_dashboard_fallback_on_weather_failure(self, client, caplog):
+        """Dashboard must tolerate weather failure WITHOUT fabricating values.
+
+        Regression guard: the old implementation silently substituted a
+        hardcoded DEFAULT_WEATHER (34°C / 40% / 62% / 12 km/h).  The dashboard
+        must instead report an honest unavailable state and log a warning.
+        """
+        with caplog.at_level(
+            logging.WARNING, logger="smart_agri_copilot.dashboard"
+        ):
+            with patch("urllib.request.urlopen", side_effect=TimeoutError("timeout")):
+                clear_cache()
+                resp = client.get("/api/dashboard?lang=en")
         assert resp.status_code == 200
         data = resp.json()
         assert "weather" in data
-        # Should fall back to DEFAULT_WEATHER
-        assert "current" in data["weather"]
-        assert "temperature_c" in data["weather"]["current"]
+        # Honest unavailable state — no fabricated current conditions.
+        assert data["weather"]["current"] is None
+        assert data["weather"]["advisories"] == []
+        # The fabricated defaults must not appear anywhere in the payload.
+        assert "34" not in json.dumps(data["weather"])
+        # The failure must be visible in logs at warning level or above.
+        assert any(
+            record.levelno >= logging.WARNING
+            and "smart_agri_copilot.dashboard" in record.name
+            for record in caplog.records
+        )
+
+    def test_dashboard_uses_persisted_district(self, client):
+        """Fix #2 — the weather service receives the user's saved district.
+
+        A user who onboarded with Karachi must get Karachi weather, not the
+        silent "lahore" default.
+        """
+        assert client.patch(
+            "/api/users/me", json={"district": "karachi"}
+        ).status_code == 200
+        seen = {}
+
+        def fake_fetch(district, lang):
+            seen["district"] = district
+            return {
+                "current": {
+                    "temperature": 31,
+                    "precipitation_chance": 5,
+                    "humidity": 48,
+                    "wind_speed": 9,
+                    "feels_like": 33,
+                    "condition": "sunny",
+                    "condition_text": "Sunny",
+                },
+                "advisories": [],
+            }
+
+        try:
+            with patch(
+                "app.routes.dashboard.fetch_weather", side_effect=fake_fetch
+            ) as mock_fetch:
+                resp = client.get("/api/dashboard?lang=en")
+            assert resp.status_code == 200
+            data = resp.json()
+            # The service was called with the persisted district, lowercased
+            # per the dashboard's normalisation — not the "lahore" default.
+            mock_fetch.assert_called_once()
+            assert seen["district"] == "karachi"
+            assert data["district"] == "karachi"
+            # Real provider values still flow through unchanged (Fix #1 intact
+            # for the success path).
+            assert data["weather"]["current"]["temperature_c"] == 31
+        finally:
+            # Don't leak the district onto the shared test user.
+            client.patch("/api/users/me", json={"district": None})
+
+    def test_dashboard_default_district_when_unset(self, client):
+        """Users with no saved district still get the documented default."""
+        client.patch("/api/users/me", json={"district": None})
+        seen = {}
+
+        def fake_fetch(district, lang):
+            seen["district"] = district
+            return {"current": {"temperature": 30}, "advisories": []}
+
+        with patch("app.routes.dashboard.fetch_weather", side_effect=fake_fetch):
+            resp = client.get("/api/dashboard?lang=en")
+        assert resp.status_code == 200
+        assert seen["district"] == "lahore"

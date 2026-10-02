@@ -6,6 +6,7 @@ import { Navbar } from './Navbar';
 import { BottomNav } from './BottomNav';
 import { MobileMenuSheet } from './MobileMenuSheet';
 import { RouteFallback } from './RouteFallback';
+import { NotificationsProvider } from '../../notifications/NotificationsProvider';
 
 /**
  * Responsive application shell (frontend-spec.md §4.4).
@@ -32,7 +33,8 @@ export function AppShell() {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-dvh bg-page">
+    <NotificationsProvider>
+      <div className="min-h-dvh bg-page">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:z-[60] focus:rounded-md focus:bg-field-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
@@ -53,6 +55,7 @@ export function AppShell() {
 
       <BottomNav className="lg:hidden" />
       <MobileMenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} />
-    </div>
+      </div>
+    </NotificationsProvider>
   );
 }

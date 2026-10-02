@@ -6,7 +6,7 @@ import { useEffect } from 'react';
  */
 export function usePageTitle(title) {
   useEffect(() => {
-    document.title = `${title} · Agri Copilot`;
+    document.title = `${title} · Smart Agri Copilot`;
     return undefined;
   }, [title]);
 }

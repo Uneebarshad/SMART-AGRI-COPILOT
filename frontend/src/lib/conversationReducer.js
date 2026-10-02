@@ -39,13 +39,16 @@ export function conversationReducer(state, action) {
       };
 
     // Backend conversation storage confirmed the optimistic user message.
+    // `stored: true` records that the row already exists server-side, so a
+    // later retry of a failed exchange must NOT persist the user message a
+    // second time (duplicate bubbles after resume).
     case 'stored':
       return {
         ...state,
         conversationId: action.conversationId,
         messages: state.messages.map((message) =>
           message.id === action.userMessageId
-            ? { ...message, status: 'sent', createdAt: action.createdAt ?? message.createdAt }
+            ? { ...message, status: 'sent', stored: true, createdAt: action.createdAt ?? message.createdAt }
             : message,
         ),
         sendStatus: 'idle',

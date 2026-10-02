@@ -5,11 +5,14 @@ router = APIRouter()
 
 @router.get("/health")
 async def health_check(request: Request):
-    """Connectivity probe; also reports the last-known database status."""
+    """Deployment-verification probe — generic status only.
+
+    The raw database error text is deliberately NOT returned: connection
+    errors can embed the full PostgreSQL DSN (user/password/host).  Details
+    stay server-side in the application logs (see lifespan in app.main).
+    """
+    db_available = bool(getattr(request.app.state, "db_ready", False))
     return {
-        "status": "ok",
-        "database": {
-            "available": getattr(request.app.state, "db_ready", False),
-            "error": getattr(request.app.state, "db_error", None),
-        },
+        "status": "ok" if db_available else "degraded",
+        "database": {"available": db_available},
     }

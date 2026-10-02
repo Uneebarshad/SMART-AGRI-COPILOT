@@ -19,6 +19,7 @@ import base64
 import json
 import logging
 import re
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -28,7 +29,16 @@ from app.config import settings
 logger = logging.getLogger("smart_agri_copilot.llm")
 
 REQUEST_TIMEOUT_SECONDS = 40
-GEMINI_TIMEOUT_SECONDS = 60
+# Gemini Vision budget: the Vercel serverless function caps requests at 60 s
+# (vercel.json maxDuration). A 60 s upstream timeout could be killed mid-call,
+# returning Vercel's HTML timeout instead of our JSON error envelope, and left
+# transient 503 "high demand" errors without any retry. Keep the total worst
+# case (2 attempts + backoff) comfortably below 60 s.
+GEMINI_TIMEOUT_SECONDS = 20
+GEMINI_MAX_ATTEMPTS = 2
+GEMINI_RETRY_BACKOFF_SECONDS = 3
+# HTTP statuses that indicate transient capacity/rate issues worth one retry.
+GEMINI_RETRYABLE_STATUS = frozenset({429, 500, 503})
 
 # ---------------------------------------------------------------------------
 # System prompt — agriculture assistant persona
@@ -522,25 +532,36 @@ def analyze_image_with_gemini(
     headers = {"Content-Type": "application/json"}
     request = urllib.request.Request(url, data=payload, headers=headers, method="POST")
 
-    try:
-        with urllib.request.urlopen(request, timeout=GEMINI_TIMEOUT_SECONDS) as resp:
-            body = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = ""
+    # Transient failures (HTTP 429/500/503 — Gemini's "high demand" responses
+    # — plus network/timeout errors) are retried once after a short backoff.
+    # Anything else, or a second transient failure, surfaces immediately.
+    body = None
+    for attempt in range(1, GEMINI_MAX_ATTEMPTS + 1):
         try:
-            detail = exc.read().decode("utf-8", errors="replace")[:300]
-        except Exception:  # noqa: BLE001
-            pass
-        logger.error("Gemini API HTTP %s: %s", exc.code, detail)
-        raise GeminiProviderError(
-            f"Gemini API returned HTTP {exc.code}"
-        ) from exc
-    except urllib.error.URLError as exc:
-        logger.error("Gemini API unreachable: %s", exc.reason)
-        raise GeminiProviderError("Gemini API is unreachable") from exc
-    except TimeoutError as exc:
-        logger.error("Gemini API timed out")
-        raise GeminiProviderError("Gemini API request timed out") from exc
+            with urllib.request.urlopen(request, timeout=GEMINI_TIMEOUT_SECONDS) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+            break
+        except urllib.error.HTTPError as exc:
+            detail = ""
+            try:
+                detail = exc.read().decode("utf-8", errors="replace")[:300]
+            except Exception:  # noqa: BLE001
+                pass
+            logger.error("Gemini API HTTP %s: %s", exc.code, detail)
+            error = GeminiProviderError(f"Gemini API returned HTTP {exc.code}")
+            if exc.code not in GEMINI_RETRYABLE_STATUS or attempt == GEMINI_MAX_ATTEMPTS:
+                raise error from exc
+        except (urllib.error.URLError, TimeoutError) as exc:
+            reason = getattr(exc, "reason", None) or "timeout"
+            logger.error("Gemini API unreachable/timeout: %s", reason)
+            error = GeminiProviderError("Gemini API is unreachable")
+            if attempt == GEMINI_MAX_ATTEMPTS:
+                raise error from exc
+        logger.warning(
+            "Gemini API transient failure (attempt %d/%d); retrying in %ds",
+            attempt, GEMINI_MAX_ATTEMPTS, GEMINI_RETRY_BACKOFF_SECONDS,
+        )
+        time.sleep(GEMINI_RETRY_BACKOFF_SECONDS)
 
     # -- Parse the Gemini response -------------------------------------------
     try:

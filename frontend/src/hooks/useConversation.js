@@ -115,29 +115,37 @@ export function useConversation(conversationIdParam) {
   }, [conversationIdParam, loadConversationIntoState]);
 
   const performExchange = useCallback(
-    async (userMessageId, content) => {
+    async (userMessageId, content, alreadyStored = false) => {
       try {
-        const conversation = state.conversationId
-          ? { id: state.conversationId }
-          : await createConversation(content.slice(0, 200));
-        const message = await addMessage(conversation.id, {
-          role: 'user',
-          content,
-        });
-
-        if (mountedRef.current) {
-          dispatch({
-            type: 'stored',
-            userMessageId,
-            conversationId: conversation.id,
-            createdAt: message.createdAt,
+        // When retrying a failed exchange whose user message was already
+        // persisted (status moved to 'stored' before the AI call failed),
+        // skip createConversation/addMessage entirely — re-adding produced a
+        // duplicate user message in the backend history.
+        let conversationId = state.conversationId;
+        if (!alreadyStored || !conversationId) {
+          const conversation = conversationId
+            ? { id: conversationId }
+            : await createConversation(content.slice(0, 200));
+          const message = await addMessage(conversation.id, {
+            role: 'user',
+            content,
           });
+          conversationId = conversation.id;
+
+          if (mountedRef.current) {
+            dispatch({
+              type: 'stored',
+              userMessageId,
+              conversationId,
+              createdAt: message.createdAt,
+            });
+          }
         }
 
         // Request AI response from the backend chat endpoint.
         try {
           const assistantMessage = await chatAssistant({
-            conversationId: conversation.id,
+            conversationId,
             message: content,
             language: lang,
           });
@@ -146,7 +154,7 @@ export function useConversation(conversationIdParam) {
             dispatch({
               type: 'sent',
               userMessageId,
-              conversationId: conversation.id,
+              conversationId,
               message: {
                 id: assistantMessage.id,
                 role: assistantMessage.role,
@@ -168,7 +176,7 @@ export function useConversation(conversationIdParam) {
           }
         }
 
-        return conversation.id;
+        return conversationId;
       } catch (error) {
         if (mountedRef.current) {
           dispatch({
@@ -209,7 +217,9 @@ export function useConversation(conversationIdParam) {
         return Promise.resolve(undefined);
       }
       dispatch({ type: 'resend', userMessageId: messageId });
-      return performExchange(messageId, failedMessage.content);
+      // `stored` is set once the backend has persisted the user message; the
+      // retry then must only re-run the AI call, not re-add the message.
+      return performExchange(messageId, failedMessage.content, failedMessage.stored === true);
     },
     [state.messages, state.sendStatus, performExchange],
   );

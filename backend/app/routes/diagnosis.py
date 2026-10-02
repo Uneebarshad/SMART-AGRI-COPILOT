@@ -15,6 +15,7 @@ from app.services.diagnosis_service import (
     analyze_and_persist,
 )
 from app.services.history_service import create_history_event
+from app.services.notification_service import create_notification
 from app.services.llm_service import (
     GeminiConfigurationError,
     GeminiProviderError,
@@ -23,6 +24,46 @@ from app.services.llm_service import (
 logger = logging.getLogger("smart_agri_copilot.diagnosis")
 
 router = APIRouter()
+
+
+def _record_scan_notification(db: Session, user: User, scan: DiagnosisScan) -> None:
+    """Surface a completed leaf scan in the notification inbox.
+
+    Reflects the stored result only — no invented severity or advice.
+    A notification failure never affects the scan response.
+    """
+    try:
+        # The Gemini Vision pipeline stores 'diagnosed'; 'disease' is the
+        # legacy status accepted by the manual CRUD endpoint. Treat both as a
+        # positive diagnosis so real scans stop falling into the 'uncertain'
+        # branch with a misleading "no firm match" inbox message.
+        if scan.status in ("disease", "diagnosed"):
+            notif_type = "disease"
+            title = f"{scan.disease_name or 'Crop disease'} detected"
+            first_step = (scan.treatment_steps or [None])[0]
+            body = first_step or f"Severity: {scan.severity or 'not assessed'}."
+        elif scan.status == "healthy":
+            notif_type = "success"
+            title = "Leaf scan: no disease detected"
+            first_tip = (scan.care_tips or [None])[0]
+            body = first_tip or "Your plant looked healthy in this scan."
+        else:
+            notif_type = "info"
+            title = "Leaf scan finished without a firm match"
+            body = "The photo could not be identified with confidence. Review the scan for retake tips."
+        create_notification(
+            db=db,
+            user_id=user.id,
+            type=notif_type,
+            title=title,
+            body=body,
+            deep_link=f"/diagnosis/{scan.id}",
+            dedupe_window_hours=None,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Could not record scan notification (%s): %s", type(exc).__name__, exc
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -87,6 +128,8 @@ async def analyze_diagnosis(
             status="Reviewed",
         )
 
+        _record_scan_notification(db, user, scan)
+
         return scan
 
     except DiagnosisValidationError as exc:
@@ -134,6 +177,9 @@ def create_scan(
     db.add(scan)
     db.commit()
     db.refresh(scan)
+
+    _record_scan_notification(db, user, scan)
+
     return scan
 
 

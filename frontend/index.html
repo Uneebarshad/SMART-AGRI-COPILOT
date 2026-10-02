@@ -10,12 +10,13 @@
       href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <title>Agri Copilot</title>
+    <title>Smart Agri Copilot</title>
     <script>
-      /* Apply theme class before first paint to avoid a flash. */
+      /* Apply theme class before first paint to avoid a flash (default: dark). */
       (function(){
         var t=localStorage.getItem('agri.theme');
-        if(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme:dark)').matches))
+        var dark = t!=='light' && (t!=='system' || matchMedia('(prefers-color-scheme:dark)').matches);
+        if(dark)
           document.documentElement.classList.add('dark');
       })();
     </script>

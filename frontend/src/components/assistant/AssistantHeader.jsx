@@ -37,10 +37,10 @@ export function AssistantHeader({ title, onNewChat, voice }) {
             <span className="hidden sm:inline">{t('assistant.newChat')}</span>
           </button>
           <Link
-            to="/history"
+            to="/conversations"
             className="flex h-11 items-center rounded-md px-2.5 text-sm font-medium text-soil-700 transition-colors hover:bg-soil-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-600 focus-visible:ring-offset-2 dark:hover:bg-white/5"
           >
-            {t('nav.history')}
+            {t('nav.conversations')}
           </Link>
           {voice?.supported && (
             <button

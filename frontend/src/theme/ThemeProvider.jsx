@@ -19,11 +19,13 @@ const ThemeContext = createContext(null);
  * - Applies the resolved value as a `dark` class on `<html>` so Tailwind's
  *   `dark:` variant and CSS custom-property overrides kick in globally.
  * - Listens for OS-level changes when 'system' is selected.
+ * - Defaults to the dark navy/blue theme with agricultural-green accents;
+ *   light remains fully supported via the Settings theme switch.
  */
 export function ThemeProvider({ children }) {
   const [preference, setPreference] = useState(() => {
     const stored = storage.get(THEME_KEY);
-    return stored && VALID_THEMES.includes(stored) ? stored : 'light';
+    return stored && VALID_THEMES.includes(stored) ? stored : 'dark';
   });
 
   const resolved = resolveTheme(preference);

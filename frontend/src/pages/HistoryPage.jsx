@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useT } from '../i18n/useT';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { formatDate } from '../lib/format';
 import { PageHeader } from '../components/layout/PageHeader';
 import { FieldDrawer } from '../components/fields/FieldDrawer';
-import { Badge, Banner, Button, Card, EmptyState, ErrorState, SelectField, Skeleton, TextField } from '../components/ui';
+import { Badge, Banner, Button, ButtonLink, Card, EmptyState, ErrorState, SelectField, Skeleton, TextField } from '../components/ui';
 import { CalendarIcon } from '../components/ui/icons/CalendarIcon';
 import { ChatIcon } from '../components/ui/icons/ChatIcon';
 import { ChartIcon } from '../components/ui/icons/ChartIcon';
@@ -14,6 +16,7 @@ import { MapPinIcon } from '../components/ui/icons/MapPinIcon';
 import { SearchIcon } from '../components/ui/icons/SearchIcon';
 import { TrashIcon } from '../components/ui/icons/TrashIcon';
 import { getHistory, deleteHistory } from '../services/historyService';
+import { deleteConversation, getConversations } from '../services/conversationService';
 
 const TYPE_CONFIG = {
   assistant: { label: 'AI Assistant', Icon: ChatIcon, tile: 'bg-field-100 text-field-700 dark:bg-field-900/20 dark:text-field-400' },
@@ -233,8 +236,169 @@ function HistorySkeleton() {
   );
 }
 
+/**
+ * One stored AI conversation (redesign §7): real title from the backend
+ * (derived from the first question), open and delete through the existing
+ * conversation endpoints. Nothing is synthesized here.
+ */
+function ConversationRow({ conversation, onOpen, onDelete }) {
+  const { t, lang } = useT();
+  return (
+    <li>
+      <Card className="p-0 md:p-0">
+        <div className="flex items-center gap-3 p-4 md:gap-4 md:p-5">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-ai-100 text-ai-700 dark:bg-ai-900/20 dark:text-ai-400">
+            <ChatIcon className="h-5 w-5" />
+          </span>
+          <button
+            type="button"
+            onClick={() => onOpen(conversation)}
+            className="min-w-0 flex-1 rounded-md text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-500"
+          >
+            <p className="truncate text-base font-semibold text-soil-900">
+              {conversation.title || t('conversations.untitled')}
+            </p>
+            <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-soil-500">
+              <CalendarIcon className="h-4 w-4 text-soil-400" />
+              {formatDate(conversation.updatedAt ?? conversation.createdAt, lang)}
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(conversation.id)}
+            aria-label={t('conversations.deleteAria')}
+            title={t('conversations.deleteAria')}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-soil-400 transition-colors hover:bg-rust-50 hover:text-rust-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 dark:hover:bg-rust-900/15"
+          >
+            <TrashIcon className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpen(conversation)}
+            aria-label={t('conversations.openAria')}
+            className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-md px-2 text-sm font-medium text-field-700 transition-colors hover:bg-field-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-600 dark:hover:bg-field-900/20"
+          >
+            <span className="hidden sm:inline">{t('conversations.open')}</span>
+            <ChevronRightIcon className="h-4 w-4" />
+          </button>
+        </div>
+      </Card>
+    </li>
+  );
+}
+
+function ConversationsSection() {
+  const { t } = useT();
+  const navigate = useNavigate();
+  const [conversations, setConversations] = useState([]);
+  // 'loading' | 'success' | 'error'
+  const [status, setStatus] = useState('loading');
+  const [deleteError, setDeleteError] = useState(false);
+
+  const load = useCallback(() => {
+    setStatus('loading');
+    return getConversations()
+      .then((items) => {
+        setConversations(items);
+        setStatus('success');
+      })
+      .catch(() => setStatus('error'));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const openConversation = useCallback(
+    (conversation) => navigate(`/assistant/${conversation.id}`),
+    [navigate],
+  );
+
+  const removeConversation = useCallback((id) => {
+    setDeleteError(false);
+    deleteConversation(id)
+      .then(() => setConversations((current) => current.filter((item) => item.id !== id)))
+      .catch(() => setDeleteError(true));
+  }, []);
+
+  return (
+    <section aria-labelledby="conversations-list-title" className="mb-8">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 id="conversations-list-title" className="font-display text-lg font-semibold tracking-tight text-soil-900 md:text-xl">
+            {t('conversations.listTitle')}
+          </h2>
+          <p className="mt-1 text-sm text-soil-600">{t('conversations.listSubtitle')}</p>
+        </div>
+        <p className="text-sm text-soil-500">{status === 'success' ? `${conversations.length}` : ''}</p>
+      </div>
+
+      {deleteError && (
+        <Banner tone="error" className="mb-3">{t('conversations.deleteError')}</Banner>
+      )}
+
+      {status === 'loading' && (
+        <ol className="space-y-3" aria-hidden="true">
+          {[1, 2, 3].map((item) => (
+            <li key={item}>
+              <Card className="p-0">
+                <div className="flex items-center gap-3 p-4">
+                  <Skeleton className="h-11 w-11 rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-2/3" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              </Card>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {status === 'error' && (
+        <Card>
+          <ErrorState
+            title={t('conversations.loadErrorTitle')}
+            message={t('conversations.loadError')}
+            onRetry={load}
+          />
+        </Card>
+      )}
+
+      {status === 'success' && conversations.length === 0 && (
+        <Card>
+          <EmptyState
+            icon={ChatIcon}
+            title={t('conversations.emptyTitle')}
+            description={t('conversations.emptyDesc')}
+            action={
+              <ButtonLink to="/assistant" variant="primary">
+                {t('conversations.startAction')}
+              </ButtonLink>
+            }
+          />
+        </Card>
+      )}
+
+      {status === 'success' && conversations.length > 0 && (
+        <ol className="space-y-3" aria-label={t('conversations.listLabel')}>
+          {conversations.map((conversation) => (
+            <ConversationRow
+              key={conversation.id}
+              conversation={conversation}
+              onOpen={openConversation}
+              onDelete={removeConversation}
+            />
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
 export function HistoryPage() {
   const { t } = useT();
+  usePageTitle(t('conversations.title'));
   const navigate = useNavigate();
   const [records, setRecords] = useState([]);
   const [loadStatus, setLoadStatus] = useState('loading');
@@ -318,8 +482,10 @@ export function HistoryPage() {
 
   return (
     <>
-      <PageHeader title={t('history.title')} subtitle="All your assistant questions, checks, and farm activity in one place." />
+      <PageHeader title={t('conversations.title')} subtitle={t('conversations.subtitle')} />
       {notice && <Banner tone={notice.includes('Couldn') ? 'error' : 'success'}>{notice}</Banner>}
+
+      <ConversationsSection />
 
       {loadStatus === 'loading' && <HistorySkeleton />}
 
@@ -340,8 +506,8 @@ export function HistoryPage() {
       <section aria-labelledby="history-list-title">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h2 id="history-list-title" className="font-display text-lg font-semibold tracking-tight text-soil-900 md:text-xl">Activity history</h2>
-            <p className="mt-1 text-sm text-soil-600">Newest activity appears first.</p>
+            <h2 id="history-list-title" className="font-display text-lg font-semibold tracking-tight text-soil-900 md:text-xl">{t('conversations.timelineTitle')}</h2>
+            <p className="mt-1 text-sm text-soil-600">{t('conversations.timelineSubtitle')}</p>
           </div>
           <p className="text-sm text-soil-500">{filteredRecords.length} of {records.length} activities</p>
         </div>

@@ -295,3 +295,57 @@ class TestExistingRoutesUnbroken:
     def test_diagnosis_scans_list(self, auth_client):
         resp = auth_client.get("/api/diagnosis/scans")
         assert resp.status_code == 200
+
+
+# ===========================================================================
+# 7. District synchronization (Fix #2)
+# ===========================================================================
+
+
+class TestDistrictSync:
+    """Onboarding/Settings district persistence via PATCH /api/users/me.
+
+    The frontend pushes the district chosen on /welcome once the session is
+    authenticated, and Settings changes go through this same endpoint; the
+    backend must persist supported districts and reject unknown ones.
+    """
+
+    def test_selected_district_persists(self, auth_client):
+        """Test 1 — a freshly authenticated user's district reaches the DB."""
+        resp = auth_client.patch("/api/users/me", json={"district": "karachi"})
+        assert resp.status_code == 200
+        assert resp.json()["district"] == "karachi"
+        # Confirmed persisted, not just echoed by the PATCH response.
+        follow = auth_client.get("/api/users/me")
+        assert follow.json()["district"] == "karachi"
+
+    def test_other_supported_district_persists(self, auth_client):
+        """Test 2 — display-name spelling of a supported district persists."""
+        resp = auth_client.patch("/api/users/me", json={"district": "Faisalabad"})
+        assert resp.status_code == 200
+        assert resp.json()["district"] == "Faisalabad"
+
+    def test_district_can_be_changed_later(self, auth_client):
+        """Test 3 — the Settings flow (change district later) still works."""
+        assert auth_client.patch(
+            "/api/users/me", json={"district": "karachi"}
+        ).status_code == 200
+        resp = auth_client.patch("/api/users/me", json={"district": "Multan"})
+        assert resp.status_code == 200
+        assert resp.json()["district"] == "Multan"
+
+    def test_invalid_district_rejected(self, auth_client):
+        """Test 4 — an unsupported district cannot be persisted."""
+        # Seed a valid district first so we can prove the invalid PATCH is a
+        # full no-op rather than a partial write.
+        auth_client.patch("/api/users/me", json={"district": "lahore"})
+        resp = auth_client.patch("/api/users/me", json={"district": "Atlantis"})
+        assert resp.status_code == 422
+        assert auth_client.get("/api/users/me").json()["district"] == "lahore"
+
+    def test_blank_district_clears(self, auth_client):
+        """A blank district is normalised to the cleared (NULL) state."""
+        auth_client.patch("/api/users/me", json={"district": "multan"})
+        resp = auth_client.patch("/api/users/me", json={"district": "   "})
+        assert resp.status_code == 200
+        assert resp.json()["district"] is None

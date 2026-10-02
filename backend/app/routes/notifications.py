@@ -25,6 +25,20 @@ def list_notifications(
     )
 
 
+@router.patch("/notifications/read-all")
+def mark_all_notifications_read(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    updated = (
+        db.query(Notification)
+        .filter(Notification.user_id == user.id, Notification.read.is_(False))
+        .update({"read": True})
+    )
+    db.commit()
+    return {"updated": updated}
+
+
 @router.patch(
     "/notifications/{notification_id}/read", response_model=NotificationRead
 )

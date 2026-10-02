@@ -62,6 +62,10 @@ _cdp_check*.js
 # Verification databases (local testing only)
 backend/*_verify.db
 
+# Local SQLite artifacts and one-off debug scripts (never deploy)
+backend/*.db
+backend/_diag_email.py
+
 # Root-level temporary screenshots
 0*-*.png
 assistant-answer*.png

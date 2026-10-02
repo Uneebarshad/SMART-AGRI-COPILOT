@@ -118,15 +118,16 @@
 }
 
 /* ── Dark theme ──────────────────────────────────────────────────────────
-   Deep navy/charcoal — NOT pure black, NOT saturated blue.
-   Main background: #0B1220. Sidebar: #0D1421. Cards: #111827.
-   Elevated surfaces: #172033. Soil scale is redefined so high numbers
-   = light (for text on dark bg); low numbers = dark neutral surfaces. */
+   Deep navy / blue technology aesthetic with agricultural-green accents.
+   Background is a dark navy; cards are a clearly lighter blue-gray so each
+   section reads as visually separated. Green is reserved for active states,
+   important icons, buttons and links (≈15–25% of the interface). Soil scale is
+   redefined so high numbers = light text, low numbers = blue-gray surfaces. */
 .dark {
-  --agri-page-bg: 11 18 32;
-  --agri-surface: 17 24 39;
-  --agri-nav: 13 20 33;
-  --agri-elevated: 23 32 51;
+  --agri-page-bg: 9 15 30;      /* #090F1E deep navy */
+  --agri-surface: 20 30 51;     /* #141E33 blue-gray card */
+  --agri-nav: 12 20 40;         /* #0C1428 dark blue sidebar */
+  --agri-elevated: 27 39 63;    /* #1B273F elevated blue-gray */
 
   /* Brand greens — brighter range for dark-bg contrast. */
   --agri-field-50: 5 46 22;
@@ -153,18 +154,19 @@
   --agri-leaf-900: 252 255 245;
   --agri-leaf-950: 255 255 252;
 
-  /* Dark-mode soil: neutral charcoal ramp (desaturated vs slate).
-     50-300 = backgrounds/borders, 400-950 = text (progressively lighter). */
-  --agri-soil-50: 11 18 32;
-  --agri-soil-100: 17 24 39;
-  --agri-soil-200: 28 36 50;
-  --agri-soil-300: 44 53 68;
-  --agri-soil-400: 105 115 129;
-  --agri-soil-500: 148 158 170;
-  --agri-soil-600: 176 185 196;
-  --agri-soil-700: 203 210 219;
-  --agri-soil-800: 224 229 236;
-  --agri-soil-900: 241 244 249;
+  /* Dark-mode soil: blue-gray neutral ramp (subtle blue tint, not charcoal).
+     50-300 = navy surfaces / blue-gray borders, 400-950 = text (progressively
+     lighter, ending near-white). */
+  --agri-soil-50: 9 15 30;
+  --agri-soil-100: 20 30 51;
+  --agri-soil-200: 32 44 68;
+  --agri-soil-300: 48 63 92;
+  --agri-soil-400: 110 124 150;
+  --agri-soil-500: 150 162 184;
+  --agri-soil-600: 178 188 206;
+  --agri-soil-700: 203 211 224;
+  --agri-soil-800: 224 230 239;
+  --agri-soil-900: 241 245 250;
   --agri-soil-950: 248 250 252;
 
   --agri-sun-50: 69 26 3;

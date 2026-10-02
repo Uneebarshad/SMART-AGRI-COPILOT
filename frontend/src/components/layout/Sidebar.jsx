@@ -3,6 +3,7 @@ import { cn } from '../../lib/cn';
 import { useT } from '../../i18n/useT';
 import { useAuth } from '../../auth/AuthProvider';
 import { BrandMark } from './BrandMark';
+import { NotificationBell } from '../notifications/NotificationBell';
 import { NAV_ITEMS, SECONDARY_ITEMS } from './navItems';
 import { UserIcon } from '../ui/icons/UserIcon';
 
@@ -51,6 +52,7 @@ export function Sidebar({ className }) {
             {t('common.brandName')}
           </span>
         </Link>
+        <NotificationBell className="ms-auto" />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-5">

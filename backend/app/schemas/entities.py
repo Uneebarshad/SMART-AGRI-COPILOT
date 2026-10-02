@@ -5,6 +5,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, field_validator
 
+from app.services.weather_service import SUPPORTED_DISTRICTS
+
 # Supported UI language codes (must stay in sync with frontend LANGUAGES).
 _SUPPORTED_LANGUAGES = {"en", "ur", "ur-Latn"}
 
@@ -66,6 +68,26 @@ class UserUpdate(BaseModel):
                 f"language must be one of {sorted(_SUPPORTED_LANGUAGES)}"
             )
         return v
+
+    @field_validator("district")
+    @classmethod
+    def _validate_district(cls, v: str | None) -> str | None:
+        # None clears the district (the dashboard then applies its default).
+        if v is None:
+            return v
+        stripped = v.strip()
+        if not stripped:
+            # A blank string is not a district - normalise to the cleared
+            # state instead of persisting a fake-looking empty value.
+            return None
+        # Only districts the weather registry knows can be persisted.  The
+        # comparison matches the dashboard's own normalisation
+        # (``.strip().lower()``), so both slug ("karachi") and display-name
+        # ("Karachi") spellings are accepted; the user's original casing is
+        # preserved in the stored value.
+        if stripped.lower() not in SUPPORTED_DISTRICTS:
+            raise ValueError("district is not supported by the weather service")
+        return stripped
 
     @field_validator("preferences")
     @classmethod

@@ -13,32 +13,12 @@ from app.models.field import Field
 from app.models.notification import Notification
 from app.models.recommendation import Recommendation
 from app.models.user import User
+from app.services.notification_service import notify_from_advisories
 from app.services.weather_service import get_weather as fetch_weather
 
 logger = logging.getLogger("smart_agri_copilot.dashboard")
 
 router = APIRouter()
-
-# Fallback weather data used when the weather service is unavailable
-# (missing API key, provider error, unsupported district, etc.).
-DEFAULT_WEATHER = {
-    "current": {
-        "temperature_c": 34,
-        "rain_chance_pct": 40,
-        "humidity_pct": 62,
-        "wind_kmh": 12,
-    },
-    "advisories": [
-        {
-            "tone": "success",
-            "text_localized": {
-                "en": "Current weather data is unavailable; use local conditions before spraying.",
-                "ur": "موجودہ موسمی ڈیٹا دستیاب نہیں؛ سپرے سے پہلے مقامی حالات دیکھیں۔",
-                "ur-Latn": "Mojooda mausami data dastiyab nahi; spray se pehle maqami halaat dekhein.",
-            },
-        }
-    ],
-}
 
 # Default district used when the user has not set one
 _DEFAULT_DISTRICT = "lahore"
@@ -111,13 +91,6 @@ def get_dashboard(
         .order_by(Recommendation.created_at.desc())
         .all()
     )
-    notifications = (
-        db.query(Notification)
-        .filter(Notification.user_id == user.id, Notification.read.is_(False))
-        .order_by(Notification.created_at.desc())
-        .limit(5)
-        .all()
-    )
     latest_scan = (
         db.query(DiagnosisScan)
         .filter(DiagnosisScan.user_id == user.id)
@@ -135,28 +108,72 @@ def get_dashboard(
             "scanned_at": latest_scan.created_at,
         }
 
-    # -- Weather: try real provider, fall back to defaults --------------------
+    # -- Weather: real provider only; honest "unavailable" on any failure -----
+    # The dashboard must NEVER present fabricated weather as current
+    # conditions.  When the provider fails (missing key, timeout, unsupported
+    # district, provider error) or returns no current conditions, we report
+    # weather as unavailable and the frontend hides the weather widgets.
     district_id = (user.district or _DEFAULT_DISTRICT).strip().lower()
     weather_lang = lang
     try:
         weather_data = fetch_weather(district=district_id, lang=weather_lang)
-        # Adapt the full weather payload into the dashboard's compact shape
-        current = weather_data.get("current", {})
-        dashboard_weather = {
-            "current": {
-                "temperature_c": current.get("temperature", 0),
-                "rain_chance_pct": current.get("precipitation_chance", 0),
-                "humidity_pct": current.get("humidity", 0),
-                "wind_kmh": current.get("wind_speed", 0),
-                "feels_like_c": current.get("feels_like", 0),
-                "condition": current.get("condition", ""),
-                "condition_text": current.get("condition_text", ""),
-            },
-            "advisories": weather_data.get("advisories", []),
-        }
-    except Exception:
-        logger.debug("Dashboard weather: falling back to DEFAULT_WEATHER")
-        dashboard_weather = DEFAULT_WEATHER
+        # Adapt the full weather payload into the dashboard's compact shape.
+        # Missing values stay null instead of becoming fabricated zeros; the
+        # frontend renders null safely (WeatherNow / StatCard fallbacks).
+        current = weather_data.get("current") or {}
+        if not current:
+            logger.warning(
+                "Dashboard weather unavailable: provider returned no current "
+                "conditions for district %r",
+                district_id,
+            )
+            dashboard_weather = {"current": None, "advisories": []}
+        else:
+            dashboard_weather = {
+                "current": {
+                    "temperature_c": current.get("temperature"),
+                    "rain_chance_pct": current.get("precipitation_chance"),
+                    "humidity_pct": current.get("humidity"),
+                    "wind_kmh": current.get("wind_speed"),
+                    "feels_like_c": current.get("feels_like"),
+                    "condition": current.get("condition"),
+                    "condition_text": current.get("condition_text"),
+                },
+                "advisories": weather_data.get("advisories", []),
+            }
+    except Exception as exc:
+        # Weather service exceptions are generic messages and never contain
+        # the API key, so logging the text is safe.
+        logger.warning(
+            "Dashboard weather unavailable (%s): %s", type(exc).__name__, exc
+        )
+        dashboard_weather = {"current": None, "advisories": []}
+    else:
+        # Real weather events become real notifications (deduplicated), so the
+        # inbox reflects actual conditions instead of staying permanently empty.
+        # A failure here must never take the dashboard down with it.
+        try:
+            notify_from_advisories(
+                db=db,
+                user_id=user.id,
+                advisories=dashboard_weather["advisories"],
+            )
+        except Exception as exc:
+            logger.warning(
+                "Could not record weather advisories as notifications (%s): %s",
+                type(exc).__name__,
+                exc,
+            )
+
+    # Unread notifications, queried last so advisories recorded during this
+    # very request are reflected in the alerts strip immediately.
+    notifications = (
+        db.query(Notification)
+        .filter(Notification.user_id == user.id, Notification.read.is_(False))
+        .order_by(Notification.created_at.desc())
+        .limit(5)
+        .all()
+    )
 
     return {
         "district": user.district,
