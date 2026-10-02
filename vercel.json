@@ -1,17 +1,28 @@
 {
-  "framework": "vite",
-  "installCommand": "npm --prefix frontend install",
-  "buildCommand": "npm --prefix frontend run build",
-  "outputDirectory": "frontend/dist",
-  "functions": {
-    "api/[...all].py": {
-      "maxDuration": 60
-    }
-  },
-  "rewrites": [
+  "builds": [
     {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
+      "src": "backend/app/main.py",
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "python3.12"
+      }
+    },
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "backend/app/main.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/$1"
     }
   ]
 }
