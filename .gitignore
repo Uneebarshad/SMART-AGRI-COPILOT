@@ -20,6 +20,9 @@ ENV/
 .env.local
 .env.*.local
 
+# Local secrets copy sheet (never commit)
+VERCEL_ENV_VARIABLES.txt
+
 # IDE
 .vscode/
 .idea/
