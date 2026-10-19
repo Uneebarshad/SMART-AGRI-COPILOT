@@ -4,10 +4,10 @@ import { AlertTriangleIcon } from './icons/AlertTriangleIcon';
 import { InfoIcon } from './icons/InfoIcon';
 
 const TONES = {
-  success: { wrap: 'border-field-600 bg-field-50 text-field-800 dark:border-field-500/40 dark:bg-field-900/15 dark:text-field-400', Icon: CheckCircleIcon },
-  error: { wrap: 'border-rust-600 bg-rust-50 text-rust-800 dark:border-rust-500/40 dark:bg-rust-900/15 dark:text-rust-400', Icon: AlertTriangleIcon },
-  warning: { wrap: 'border-sun-600 bg-sun-50 text-sun-800 dark:border-sun-500/40 dark:bg-sun-900/15 dark:text-sun-400', Icon: AlertTriangleIcon },
-  info: { wrap: 'border-sky-600 bg-sky-50 text-sky-800 dark:border-sky-500/40 dark:bg-sky-900/15 dark:text-sky-400', Icon: InfoIcon },
+  success: { wrap: 'border-field-600 bg-field-50 text-field-800 dark:border-field-500/40 dark:bg-field-500/10 dark:text-field-300', Icon: CheckCircleIcon },
+  error: { wrap: 'border-rust-600 bg-rust-50 text-rust-800 dark:border-rust-500/40 dark:bg-rust-500/10 dark:text-rust-400', Icon: AlertTriangleIcon },
+  warning: { wrap: 'border-sun-600 bg-sun-50 text-sun-800 dark:border-sun-500/40 dark:bg-sun-500/10 dark:text-sun-400', Icon: AlertTriangleIcon },
+  info: { wrap: 'border-sky-600 bg-sky-50 text-sky-800 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-400', Icon: InfoIcon },
 };
 
 /**

@@ -14,15 +14,11 @@ class Settings(BaseSettings):
     # CORS - list of allowed frontend origins
     cors_origins: list[str] = ["http://localhost:5173"]
 
-    # LLM — provider-agnostic (OpenAI-compatible API format)
-    llm_provider: str = ""       # informational label, e.g. "gemini"
-    llm_model: str = ""          # model name, e.g. "gemini-2.0-flash"
-    llm_api_key: str = ""        # bearer token (never sent to frontend)
-    llm_api_base: str = ""       # e.g. "https://generativelanguage.googleapis.com/v1beta/openai"
-
-    # Gemini Vision — used for leaf-scan diagnosis (image analysis)
-    gemini_api_key: str = ""     # Google AI Studio API key (never sent to frontend)
-    gemini_model: str = "gemini-2.0-flash"  # vision-capable model
+    # Gemini — Google's official SDK (google-genai). Used by the AI assistant
+    # chat and by leaf-scan image diagnosis. Backend only: the key is never
+    # exposed to the frontend and never written to logs.
+    gemini_api_key: str = ""                  # Google AI Studio API key
+    gemini_model: str = "gemini-2.5-flash"    # chat + vision capable model
 
     # Weather — WeatherAPI.com forecast provider (never sent to frontend)
     weather_api_key: str = ""    # WeatherAPI.com API key

@@ -15,11 +15,11 @@ import { BugIcon } from '../ui/icons/BugIcon';
  * disease = red, action = indigo (AI next step).
  */
 const TYPE_CONFIG = {
-  irrigation: { Icon: DropletIcon, tile: 'bg-teal-100 text-teal-700 dark:bg-teal-900/20 dark:text-teal-400' },
-  'crop-health': { Icon: LeafIcon, tile: 'bg-field-100 text-field-700 dark:bg-field-900/20 dark:text-field-400' },
-  weather: { Icon: CloudRainIcon, tile: 'bg-sky-100 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400' },
-  disease: { Icon: BugIcon, tile: 'bg-rust-100 text-rust-700 dark:bg-rust-900/20 dark:text-rust-400' },
-  action: { Icon: SproutIcon, tile: 'bg-ai-100 text-ai-700 dark:bg-ai-900/20 dark:text-ai-400' },
+  irrigation: { Icon: DropletIcon, tile: 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-400' },
+  'crop-health': { Icon: LeafIcon, tile: 'bg-field-100 text-field-700 dark:bg-field-500/15 dark:text-field-300' },
+  weather: { Icon: CloudRainIcon, tile: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-400' },
+  disease: { Icon: BugIcon, tile: 'bg-rust-100 text-rust-700 dark:bg-rust-500/15 dark:text-rust-400' },
+  action: { Icon: SproutIcon, tile: 'bg-ai-100 text-ai-700 dark:bg-ai-500/15 dark:text-ai-400' },
 };
 
 const FALLBACK_CONFIG = { Icon: InfoIcon, tile: 'bg-soil-100 text-soil-600 dark:bg-soil-200 dark:text-soil-400' };
@@ -32,16 +32,16 @@ function InsightCard({ insight }) {
       <Link
         to={insight.link}
         className={cn(
-          'group flex items-start gap-4 rounded-xl border border-soil-200 bg-surface p-4 shadow-card transition-[border-color,box-shadow] duration-150',
-          'hover:border-soil-300 dark:hover:border-soil-300 dark:hover:bg-white/[0.03] hover:shadow-raised',
+          'group flex items-start gap-4 rounded-2xl border border-soil-200 bg-surface p-4 shadow-card transition-[border-color,box-shadow,transform] duration-200',
+          'hover:-translate-y-0.5 hover:border-field-500/40 hover:shadow-raised dark:hover:bg-white/[0.02]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-600 focus-visible:ring-offset-2',
         )}
       >
-        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-lg', tile)}>
+        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', tile)}>
           <Icon className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-soil-900">{insight.title}</h3>
+          <h3 className="text-sm font-semibold text-soil-900 dark:text-soil-950">{insight.title}</h3>
           <p className="mt-1 text-sm leading-relaxed text-soil-600 line-clamp-2">{insight.description}</p>
         </div>
         <ChevronRightIcon className="mt-1 h-4 w-4 shrink-0 text-soil-400 transition-transform duration-150 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />

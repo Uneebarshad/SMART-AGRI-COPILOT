@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models.diagnosis import DiagnosisScan
 from app.models.user import User
-from app.services.llm_service import (
+from app.services.gemini_service import (
     GeminiConfigurationError,
     GeminiDiagnosisResult,
     GeminiProviderError,

@@ -8,6 +8,8 @@ import { ConversationsIcon } from '../ui/icons/ConversationsIcon';
 import { BellIcon } from '../ui/icons/BellIcon';
 import { ChartIcon } from '../ui/icons/ChartIcon';
 import { BugIcon } from '../ui/icons/BugIcon';
+import { HomeIcon } from '../ui/icons/HomeIcon';
+import { BellIcon } from '../ui/icons/BellIcon';
 
 /**
  * Single source of navigation structure (frontend-spec.md §4.3).
@@ -29,5 +31,21 @@ export const SECONDARY_ITEMS = [
   { id: 'crop-recommendation', path: '/crop-recommendation', labelKey: 'nav.recommendations', icon: ChartIcon },
   { id: 'diseases', path: '/diseases', labelKey: 'nav.diseases', icon: BugIcon },
   { id: 'history', path: '/conversations', labelKey: 'nav.conversations', icon: ConversationsIcon },
+  { id: 'notifications', path: '/notifications', labelKey: 'nav.notifications', icon: BellIcon },
+];
+
+/**
+ * Desktop sidebar order mirrors the reference design: the whole product
+ * surface in one list. Every path is an existing route — Conversations
+ * lands on the history list and Notifications on its own page.
+ */
+export const SIDEBAR_ITEMS = [
+  { id: 'home', path: '/', labelKey: 'nav.dashboard', icon: HomeIcon },
+  { id: 'fields', path: '/fields', labelKey: 'nav.fields', icon: MapPinIcon },
+  { id: 'assistant', path: '/assistant', labelKey: 'nav.assistant', icon: ChatIcon },
+  { id: 'diagnosis', path: '/diagnosis', labelKey: 'nav.diagnosis', icon: LeafIcon },
+  { id: 'crop-recommendation', path: '/crop-recommendation', labelKey: 'nav.recommendations', icon: ChartIcon },
+  { id: 'weather', path: '/weather', labelKey: 'nav.weather', icon: CloudRainIcon },
+  { id: 'history', path: '/history', labelKey: 'nav.conversations', icon: CalendarIcon },
   { id: 'notifications', path: '/notifications', labelKey: 'nav.notifications', icon: BellIcon },
 ];

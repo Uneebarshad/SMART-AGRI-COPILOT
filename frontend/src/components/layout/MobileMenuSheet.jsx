@@ -5,7 +5,10 @@ import { useT } from '../../i18n/useT';
 import { useAuth } from '../../auth/AuthProvider';
 import { LANGUAGES } from '../../i18n/I18nProvider';
 import { BrandMark } from './BrandMark';
-import { NAV_ITEMS, SECONDARY_ITEMS } from './navItems';
+import { SIDEBAR_ITEMS } from './navItems';
+import { SettingsIcon } from '../ui/icons/SettingsIcon';
+import { BugIcon } from '../ui/icons/BugIcon';
+import { LogoutIcon } from '../ui/icons/LogoutIcon';
 import { XIcon } from '../ui/icons/XIcon';
 import { GlobeIcon } from '../ui/icons/GlobeIcon';
 
@@ -22,6 +25,11 @@ const linkClasses = ({ isActive }) =>
       ? 'bg-field-50 dark:bg-field-900/20 font-semibold text-field-800 dark:text-field-400'
       : 'font-medium text-soil-600 hover:bg-soil-100 hover:text-soil-900 dark:hover:bg-white/5',
   );
+
+const EXTRA_ITEMS = [
+  { id: 'settings', path: '/settings', labelKey: 'nav.settings', icon: SettingsIcon },
+  { id: 'diseases', path: '/diseases', labelKey: 'nav.diseases', icon: BugIcon },
+];
 
 /**
  * Mobile navigation sheet opened from the top bar (frontend-spec.md §4.4).
@@ -114,9 +122,9 @@ export function MobileMenuSheet({ open, onClose }) {
 
         <div className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="space-y-1">
-            {NAV_ITEMS.map((item) => (
+            {SIDEBAR_ITEMS.map((item) => (
               <li key={item.id}>
-                <NavLink to={item.path} className={linkClasses} onClick={onClose}>
+                <NavLink to={item.path} end={item.path === '/'} className={linkClasses} onClick={onClose}>
                   <item.icon className="h-5 w-5 shrink-0" />
                   <span className="truncate">{t(item.labelKey)}</span>
                 </NavLink>
@@ -126,11 +134,8 @@ export function MobileMenuSheet({ open, onClose }) {
 
           <div className="my-4 border-t border-soil-200" />
 
-          <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-soil-400">
-            {t('common.moreNav')}
-          </p>
           <ul className="space-y-1">
-            {SECONDARY_ITEMS.map((item) => (
+            {EXTRA_ITEMS.map((item) => (
               <li key={item.id}>
                 <NavLink to={item.path} className={linkClasses} onClick={onClose}>
                   <item.icon className="h-5 w-5 shrink-0" />
@@ -138,6 +143,16 @@ export function MobileMenuSheet({ open, onClose }) {
                 </NavLink>
               </li>
             ))}
+            <li>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-soil-600 transition-colors hover:bg-soil-100 hover:text-soil-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-500 dark:text-soil-500 dark:hover:bg-white/5"
+              >
+                <LogoutIcon className="h-5 w-5 shrink-0" />
+                <span className="truncate">{t('common.logout')}</span>
+              </button>
+            </li>
           </ul>
         </div>
 
@@ -151,13 +166,6 @@ export function MobileMenuSheet({ open, onClose }) {
               {user?.email && <p className="truncate text-xs text-soil-500">{user.email}</p>}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="mb-3 flex w-full items-center justify-center rounded-lg border border-soil-200 bg-surface px-3 py-2 text-sm font-medium text-soil-700 transition-colors hover:bg-soil-50 dark:border-soil-300 dark:text-soil-300 dark:hover:bg-white/5"
-          >
-            Sign out
-          </button>
           <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-soil-400">
             <GlobeIcon className="h-4 w-4" />
             {t('common.language')}

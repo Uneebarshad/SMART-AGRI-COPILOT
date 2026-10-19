@@ -15,19 +15,19 @@ import { SectionHeader, sectionLinkClass } from './SectionHeader';
 
 const ADVISORY_TONES = {
   success: {
-    wrap: 'border-field-600 bg-field-50 text-field-800 hover:bg-field-100 dark:border-field-500/40 dark:bg-field-900/15 dark:text-field-400 dark:hover:bg-field-900/25',
+    wrap: 'border-field-600 bg-field-50 text-field-800 hover:bg-field-100 dark:border-field-500/40 dark:bg-field-500/10 dark:text-field-300 dark:hover:bg-field-500/20',
     Icon: CheckCircleIcon,
   },
   error: {
-    wrap: 'border-rust-600 bg-rust-50 text-rust-800 hover:bg-rust-100 dark:border-rust-500/40 dark:bg-rust-900/15 dark:text-rust-400 dark:hover:bg-rust-900/25',
+    wrap: 'border-rust-600 bg-rust-50 text-rust-800 hover:bg-rust-100 dark:border-rust-500/40 dark:bg-rust-500/10 dark:text-rust-400 dark:hover:bg-rust-500/20',
     Icon: AlertTriangleIcon,
   },
   warning: {
-    wrap: 'border-sun-600 bg-sun-50 text-sun-800 hover:bg-sun-100 dark:border-sun-500/40 dark:bg-sun-900/15 dark:text-sun-400 dark:hover:bg-sun-900/25',
+    wrap: 'border-sun-600 bg-sun-50 text-sun-800 hover:bg-sun-100 dark:border-sun-500/40 dark:bg-sun-500/10 dark:text-sun-400 dark:hover:bg-sun-500/20',
     Icon: AlertTriangleIcon,
   },
   info: {
-    wrap: 'border-sky-600 bg-sky-50 text-sky-800 hover:bg-sky-100 dark:border-sky-500/40 dark:bg-sky-900/15 dark:text-sky-400 dark:hover:bg-sky-900/25',
+    wrap: 'border-sky-600 bg-sky-50 text-sky-800 hover:bg-sky-100 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-400 dark:hover:bg-sky-500/20',
     Icon: InfoIcon,
   },
 };

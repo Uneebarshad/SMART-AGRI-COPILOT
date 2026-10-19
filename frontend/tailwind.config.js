@@ -25,8 +25,9 @@ export default {
         display: ['Fraunces', 'Georgia', 'Times New Roman', 'serif'],
       },
       boxShadow: {
-        card: '0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04)',
-        raised: '0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04)',
+        card: '0 1px 2px 0 rgb(0 0 0 / 0.18), 0 1px 3px 0 rgb(0 0 0 / 0.12)',
+        raised: '0 8px 24px -8px rgb(0 0 0 / 0.45), 0 2px 6px -2px rgb(0 0 0 / 0.25)',
+        glow: '0 0 0 1px rgb(57 211 83 / 0.14), 0 8px 30px -12px rgb(57 211 83 / 0.28)',
       },
     },
   },

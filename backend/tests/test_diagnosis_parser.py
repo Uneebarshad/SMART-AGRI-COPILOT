@@ -1,4 +1,4 @@
-"""Unit tests for _safe_parse_diagnosis() in llm_service.py.
+"""Unit tests for _safe_parse_diagnosis() in gemini_service.py.
 
 Tests cover all parsing scenarios: pure JSON, fenced JSON, text with JSON,
 nested objects, malformed input, and empty responses.
@@ -6,7 +6,7 @@ nested objects, malformed input, and empty responses.
 
 import pytest
 
-from app.services.llm_service import _safe_parse_diagnosis, GeminiDiagnosisResult
+from app.services.gemini_service import _safe_parse_diagnosis, GeminiDiagnosisResult
 
 
 class TestSafeParseDiagnosis:

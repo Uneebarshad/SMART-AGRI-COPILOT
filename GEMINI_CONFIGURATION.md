@@ -1,148 +1,114 @@
-# Gemini BYOK Configuration Summary
+# Gemini Configuration (Google's official SDK)
 
 ## Overview
-Successfully configured the existing backend LLM provider for Google Gemini BYOK (Bring Your Own Key) without modifying frontend, database, or installing new dependencies.
 
-## How It Works
-The existing provider-agnostic LLM service uses OpenAI-compatible API format. Google Gemini provides an OpenAI-compatible endpoint at:
-```
-https://generativelanguage.googleapis.com/v1beta/openai
-```
+The backend talks to Google Gemini through the official Python SDK
+[`google-genai`](https://pypi.org/project/google-genai/). One service —
+`backend/app/services/gemini_service.py` — powers both features:
 
-This allows the existing code to work with Gemini without any architectural changes.
+| Feature | Service function | Endpoint |
+|---------|------------------|----------|
+| AI Assistant chat | `generate_response()` | `POST /api/assistant/chat` |
+| Leaf-scan diagnosis (vision) | `analyze_image_with_gemini()` | `POST /api/diagnosis/analyze` |
 
-## Files Changed
+The previous provider-agnostic "OpenAI-compatible `/chat/completions`" workaround
+(`backend/app/services/llm_service.py` plus the `LLM_*` environment variables) has
+been removed.
 
-### 1. backend/.env.example
-- Updated LLM section comments to reflect Gemini configuration
-- Set `LLM_PROVIDER="gemini"`
-- Set `LLM_MODEL="gemini-2.0-flash"`
-- Set `LLM_API_BASE="https://generativelanguage.googleapis.com/v1beta/openai"`
-- Kept `LLM_API_KEY=""` (empty for security)
+## Environment variables (backend only)
 
-### 2. backend/.env
-- Same changes as .env.example for consistency
-- API key remains empty (user must add their own)
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `GEMINI_API_KEY` | *(user provides, never committed)* | Google AI Studio API key |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Model used for chat and vision |
 
-### 3. backend/app/config.py
-- Updated docstring examples from OpenAI to Gemini
-- No functional changes (already provider-agnostic)
+Both are read through `app.config.Settings` (`backend/app/config.py`) from
+`backend/.env`. `.env` is gitignored; `.env.example` ships with an empty key.
 
-### 4. backend/app/services/llm_service.py
-- Updated module docstring to mention Gemini support
-- Changed fallback model from `gpt-4o-mini` to `gemini-2.0-flash`
-- No functional changes to request/response handling
+Note on precedence: real environment variables override `backend/.env`. If a
+`GEMINI_API_KEY` is also exported in the shell or the OS environment, that value
+wins — which can make a local run behave differently from a deploy.
 
-## Environment Variables Required
+Removed / no longer used: `LLM_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`,
+`LLM_API_BASE`, and any `OPENAI_*` variables.
 
-| Variable | Value | Purpose |
-|----------|-------|---------|
-| `LLM_PROVIDER` | `gemini` | Informational label |
-| `LLM_MODEL` | `gemini-2.0-flash` | Gemini model name |
-| `LLM_API_KEY` | *(user provides)* | Google AI Studio API key |
-| `LLM_API_BASE` | `https://generativelanguage.googleapis.com/v1beta/openai` | Gemini OpenAI-compatible endpoint |
+## Model availability
 
-## Gemini Model Configured
-**Model:** `gemini-2.0-flash`
-- Fast, efficient, cost-effective
-- Supports chat completions API
-- Same model used for both AI Assistant and Vision diagnosis
+Google retires Gemini ids over time and some models are unavailable to *newly
+created* API-key projects. A retired or unavailable id makes the assistant return
+HTTP 502 with a `Gemini model '<id>' not found — check GEMINI_MODEL` entry in the
+backend log (the 404 is surfaced, never swallowed). Verified ids at the time of
+writing:
 
-## Gemini API Base URL
-```
-https://generativelanguage.googleapis.com/v1beta/openai
-```
+| Model id | Notes |
+|----------|-------|
+| `gemini-2.5-flash` | Default; fast (~1–3 s), but rejected as 404 by newer key projects |
+| `gemini-3.5-flash` | Works with both old and new keys; slower (~20–35 s) |
+| `gemini-3.8-flash` | Newest flash model; works with both keys |
 
-The existing code appends `/chat/completions` to this base URL, resulting in:
-```
-https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
-```
+Pick the model that matches the key deployed to that environment — it is a single
+environment variable change, no code change.
 
-## Assistant Endpoint Compatibility
-✅ **YES** - The existing Assistant endpoint (`POST /assistant/chat`) can use the new Gemini provider without any changes.
+## How the assistant request works
 
-**How it works:**
-1. Frontend sends chat message to `/assistant/chat`
-2. Route calls `generate_response()` from `llm_service.py`
-3. Service constructs OpenAI-compatible request with:
-   - Model: `gemini-2.0-flash`
-   - Messages: system prompt + history + user message
-   - Auth: `Authorization: Bearer {LLM_API_KEY}`
-4. Request sent to Gemini's OpenAI-compatible endpoint
-5. Response parsed from standard `choices[0].message.content` format
-6. Assistant message persisted to database and returned to frontend
+1. Frontend sends `{conversation_id, message, language}` to `POST /api/assistant/chat`.
+2. The route authenticates the user, loads up to 20 prior messages, and builds the
+   farmer context block (profile, fields, current weather).
+3. `generate_response()` sends, through the SDK:
+   - `system_instruction` — agriculture persona + language rule + `FARMER CONTEXT`
+   - `contents` — history mapped to Gemini roles (`assistant` → `model`) plus the
+     new user turn
+   - `temperature=0.7`, `max_output_tokens=800`
+4. The reply text is stored as an assistant `Message` and returned in the unchanged
+   `MessageRead` shape (`id`, `role`, `content`, `sources`, `follow_ups`, `created_at`,
+   HTTP 201), so the frontend needs no changes.
 
-## Security & Best Practices
+## Reliability and safety
 
-✅ **API Key Security:**
-- Never hardcoded in source
-- Never logged or printed
-- Never exposed to frontend
-- Empty in .env.example and committed files
-- .env is properly gitignored (line 19 of .gitignore)
+- Per-request timeouts: 45 s (chat), 60 s (vision); limited retries (2 attempts) on
+  429/500/502/503 with short backoff.
+- Connection-level drops (server disconnect, reset) are retried once with a 1 s
+  backoff before failing; timeouts are never retried so the caller does not wait
+  twice as long.
+- Failures are translated into `GeminiProviderError` with short, safe messages
+  (`Gemini rate limit exceeded`, `Gemini model '<id>' not found — check GEMINI_MODEL`,
+  `Gemini rejected the API key (permission denied)`, timeouts, network errors).
+- Missing key raises `GeminiConfigurationError` → HTTP 503 `llm_not_configured`;
+  provider failures → HTTP 502 `llm_provider_error`. Both response codes and error
+  strings keep the existing frontend contract.
+- The key is sent by the SDK in a request header (never in a URL query string) and
+  every value that reaches a log line or error message passes through a redaction
+  helper, so secrets cannot leak into logs.
+- Nothing Gemini-related exists in the frontend: `frontend/.env.example` only defines
+  `VITE_API_BASE_URL`.
 
-✅ **Error Handling:**
-- Existing error handling preserved
-- `LLMConfigurationError` raised if key/base missing
-- `LLMProviderError` raised on API failures
-- Secret-safe logging (no keys in logs)
+## Setup
 
-✅ **No Breaking Changes:**
-- Frontend unchanged
-- Database unchanged
-- Routes unchanged
-- Conversation flow intact
-- Existing error handling preserved
-
-## Setup Instructions
-
-1. **Get Gemini API Key:**
-   - Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
-   - Create a new API key
-
-2. **Configure Backend:**
-   - Open `backend/.env`
-   - Set `LLM_API_KEY="your-gemini-api-key-here"`
-
-3. **Start Backend:**
+1. Create a key at [Google AI Studio](https://aistudio.google.com/app/apikey).
+2. In `backend/.env`:
+   ```env
+   GEMINI_API_KEY=your_gemini_api_key
+   GEMINI_MODEL=gemini-2.5-flash
+   ```
+3. Install dependencies and start the API:
    ```bash
    cd backend
-   source .venv/Scripts/activate  # Windows
+   .venv\Scripts\activate         # Windows
+   pip install -r requirements.txt
    uvicorn app.main:app --reload
    ```
+4. Ask the AI Assistant a question — the answer now comes from Gemini.
 
-4. **Test:**
-   - Open frontend
-   - Navigate to AI Assistant
-   - Send a message
-   - Gemini will respond through the existing chat interface
+To change the model (for example to a newer Flash release), update `GEMINI_MODEL`
+and restart; no code changes are needed.
 
-## Remaining Issues
-**None** - Configuration is complete and ready to use once the API key is added to `.env`.
+## Tests
 
-## Architecture Notes
-
-The existing provider-agnostic design means you can switch between providers by changing environment variables:
-
-**Gemini:**
-```env
-LLM_PROVIDER=gemini
-LLM_MODEL=gemini-2.0-flash
-LLM_API_BASE=https://generativelanguage.googleapis.com/v1beta/openai
+```bash
+cd backend
+.venv\Scripts\python.exe -m pytest tests/test_gemini_service.py tests/test_diagnosis_parser.py tests/test_assistant_context.py
 ```
 
-**OpenAI:**
-```env
-LLM_PROVIDER=openai
-LLM_MODEL=gpt-4o-mini
-LLM_API_BASE=https://api.openai.com/v1
-```
-
-**Azure OpenAI:**
-```env
-LLM_PROVIDER=azure
-LLM_MODEL=your-deployment-name
-LLM_API_BASE=https://your-resource.openai.azure.com/openai/deployments
-```
-
-No code changes required - just update `.env` and restart.
+`tests/test_gemini_service.py` covers configuration errors, provider-error mapping,
+secret redaction, request shape, and vision parsing — with the Gemini boundary
+mocked, so no key or network access is required.

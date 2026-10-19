@@ -6,3 +6,7 @@ pydantic-settings==2.7.1
 python-multipart==0.0.20
 bcrypt==5.0.0
 PyJWT==2.13.0
+
+# Gemini (Google's official SDK) — AI assistant chat + leaf-scan vision diagnosis
+httpx==0.28.1
+google-genai==2.25.0

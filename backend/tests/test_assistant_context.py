@@ -116,10 +116,10 @@ def _create_field(user_id: int, **kwargs) -> int:
 # ---------------------------------------------------------------------------
 
 def _mock_llm_response(**kwargs):
-    """Return a fake LLMResponse and capture the call kwargs."""
-    from app.services.llm_service import LLMResponse
+    """Return a fake GeminiResponse and capture the call kwargs."""
+    from app.services.gemini_service import GeminiResponse
     _mock_llm_response.last_call = kwargs
-    return LLMResponse(content="Mock response")
+    return GeminiResponse(content="Mock response")
 
 _mock_llm_response.last_call = {}
 
@@ -499,15 +499,28 @@ class TestLLMServiceContext:
 
     def test_generate_response_accepts_context(self):
         """generate_response() accepts the context keyword argument."""
-        from app.services.llm_service import generate_response, LLMConfigurationError
+        from app.services.gemini_service import generate_response
         import inspect
 
         sig = inspect.signature(generate_response)
         assert "context" in sig.parameters
 
+    def test_generate_response_requires_api_key(self):
+        """generate_response() raises when GEMINI_API_KEY is missing."""
+        from app.services.gemini_service import (
+            GeminiConfigurationError,
+            generate_response,
+        )
+
+        with patch("app.services.gemini_service.settings") as mock_settings:
+            mock_settings.gemini_api_key = ""
+            mock_settings.gemini_model = "gemini-2.5-flash"
+            with pytest.raises(GeminiConfigurationError):
+                generate_response(history=[], user_message="Hello")
+
     def test_build_system_prompt_includes_context(self):
         """_build_system_prompt() appends context when provided."""
-        from app.services.llm_service import _build_system_prompt
+        from app.services.gemini_service import _build_system_prompt
 
         prompt_no_ctx = _build_system_prompt("en")
         prompt_with_ctx = _build_system_prompt("en", "Farmer:\nName: Uneeb")
@@ -519,7 +532,7 @@ class TestLLMServiceContext:
 
     def test_build_system_prompt_context_none(self):
         """_build_system_prompt() with context=None has no data block."""
-        from app.services.llm_service import _build_system_prompt
+        from app.services.gemini_service import _build_system_prompt
 
         prompt = _build_system_prompt("en", None)
         assert "You have access to this data" not in prompt
@@ -530,41 +543,38 @@ class TestLLMServiceContext:
 # ===========================================================================
 
 
-class _FakeHTTPResponse:
-    """Minimal stand-in for urllib.response to satisfy urlopen()."""
+class _FakeGeminiResponse:
+    """Minimal stand-in for the SDK's GenerateContentResponse."""
 
-    def __init__(self, body: dict):
-        self._body = json.dumps(body).encode("utf-8")
-
-    def read(self):
-        return self._body
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        pass
-
-
-_FAKE_LLM_RESPONSE = {
-    "choices": [{"message": {"content": "Mock reply"}}]
-}
+    def __init__(self, text: str):
+        self.text = text
+        self.candidates = None
+        self.prompt_feedback = None
 
 
 def _capture_llm_request(context: str | None, user_message: str = "Hello"):
-    """Call generate_response() with urlopen mocked; return (captured_payload, result)."""
-    import io
+    """Call generate_response() with the Gemini API boundary mocked.
+
+    Returns (captured_request, result); captured_request holds the model id,
+    contents and config that the official SDK would have sent to Gemini.
+    """
     captured = {}
 
-    def fake_urlopen(request, timeout=None):
-        captured["url"] = request.full_url
-        captured["payload"] = json.loads(request.data.decode("utf-8"))
-        captured["method"] = request.get_method()
-        return _FakeHTTPResponse(_FAKE_LLM_RESPONSE)
+    def fake_generate_content(self, *, model, contents, config=None):
+        captured["model"] = model
+        captured["contents"] = contents
+        captured["config"] = config
+        return _FakeGeminiResponse("Mock reply")
 
-    from app.services.llm_service import generate_response
+    from app.services.gemini_service import generate_response
 
-    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+    with patch("app.services.gemini_service.settings") as mock_settings, patch(
+        "google.genai.models.Models.generate_content",
+        autospec=True,
+        side_effect=fake_generate_content,
+    ):
+        mock_settings.gemini_api_key = "test-gemini-key"
+        mock_settings.gemini_model = "gemini-2.5-flash"
         result = generate_response(
             history=[],
             user_message=user_message,
@@ -575,11 +585,12 @@ def _capture_llm_request(context: str | None, user_message: str = "Hello"):
 
 
 def _get_system_message(captured: dict) -> str:
-    """Extract the system message content from a captured LLM payload."""
-    messages = captured["payload"]["messages"]
-    system_msgs = [m for m in messages if m["role"] == "system"]
-    assert len(system_msgs) == 1, f"Expected 1 system message, got {len(system_msgs)}"
-    return system_msgs[0]["content"]
+    """Extract the system instruction text from a captured Gemini request."""
+    instruction = captured["config"].system_instruction
+    if isinstance(instruction, str):
+        return instruction
+    parts = getattr(instruction, "parts", None) or []
+    return "".join(part.text for part in parts if getattr(part, "text", None))
 
 
 class TestHTTPBoundaryWeather:
@@ -666,9 +677,14 @@ class TestHTTPBoundaryWeather:
         assert "Clear sky" in system_msg
         assert "Current weather" in system_msg
 
+    def test_captured_request_uses_configured_model(self):
+        """The request carries the model id from configuration."""
+        captured, _result = _capture_llm_request("Farmer:\nName: ModelCheck")
+        assert captured["model"] == "gemini-2.5-flash"
+
     def test_no_conflicting_denial_instructions(self):
         """The system prompt must NOT contain instructions that force denial of weather access."""
-        from app.services.llm_service import SYSTEM_PROMPT_BASE
+        from app.services.gemini_service import SYSTEM_PROMPT_BASE
 
         # These phrases would cause Gemini to deny having weather data
         assert "capabilities you do not have" not in SYSTEM_PROMPT_BASE
@@ -681,14 +697,14 @@ class TestHTTPBoundaryWeather:
 
     def test_system_prompt_tells_model_to_use_provided_weather(self):
         """The system prompt instructs the model to use weather from FARMER CONTEXT."""
-        from app.services.llm_service import SYSTEM_PROMPT_BASE
+        from app.services.gemini_service import SYSTEM_PROMPT_BASE
 
         assert "FARMER CONTEXT includes current weather data" in SYSTEM_PROMPT_BASE
         assert "Only say weather is unavailable when FARMER CONTEXT does NOT" in SYSTEM_PROMPT_BASE
 
     def test_farmer_context_framing_grants_access(self):
         """The FARMER CONTEXT block explicitly tells the model it has access to the data."""
-        from app.services.llm_service import _build_system_prompt
+        from app.services.gemini_service import _build_system_prompt
 
         prompt = _build_system_prompt("en", "Farmer:\nName: Test")
         assert "You have access to this data" in prompt
@@ -706,8 +722,8 @@ class TestEndToEndWeather:
     @patch("app.routes.assistant.generate_response")
     def test_e2e_weather_reaches_generate_response(self, mock_gen):
         """Full flow: user with district → weather fetched → context passed to LLM."""
-        from app.services.llm_service import LLMResponse
-        mock_gen.return_value = LLMResponse(content="Weather reply")
+        from app.services.gemini_service import GeminiResponse
+        mock_gen.return_value = GeminiResponse(content="Weather reply")
 
         client, token, user_id = _register_user(name="E2EWeather", district="lahore")
         conv_id = _create_conversation(user_id)
@@ -753,8 +769,8 @@ class TestAssistantHistory:
     @patch("app.routes.assistant.generate_response")
     def test_first_chat_creates_history_entry(self, mock_gen):
         """The first chat exchange in a conversation creates exactly ONE history entry."""
-        from app.services.llm_service import LLMResponse
-        mock_gen.return_value = LLMResponse(content="Test reply")
+        from app.services.gemini_service import GeminiResponse
+        mock_gen.return_value = GeminiResponse(content="Test reply")
 
         client, token, user_id = _register_user(name="HistFarmer")
         conv_id = _create_conversation(user_id)
@@ -789,8 +805,8 @@ class TestAssistantHistory:
     @patch("app.routes.assistant.generate_response")
     def test_second_chat_no_duplicate_history(self, mock_gen):
         """Sending a second message in the same conversation does NOT create another history entry."""
-        from app.services.llm_service import LLMResponse
-        mock_gen.return_value = LLMResponse(content="Reply")
+        from app.services.gemini_service import GeminiResponse
+        mock_gen.return_value = GeminiResponse(content="Reply")
 
         client, token, user_id = _register_user(name="NoDupFarmer")
         conv_id = _create_conversation(user_id)
@@ -830,8 +846,8 @@ class TestAssistantHistory:
     @patch("app.routes.assistant.generate_response")
     def test_history_entry_contains_conversation_id(self, mock_gen):
         """The history entry's related_entity_id matches the conversation ID."""
-        from app.services.llm_service import LLMResponse
-        mock_gen.return_value = LLMResponse(content="Reply")
+        from app.services.gemini_service import GeminiResponse
+        mock_gen.return_value = GeminiResponse(content="Reply")
 
         client, token, user_id = _register_user(name="IdFarmer")
         conv_id = _create_conversation(user_id)
@@ -857,8 +873,8 @@ class TestAssistantHistory:
     @patch("app.routes.assistant.generate_response")
     def test_history_is_user_scoped(self, mock_gen):
         """Another user cannot see this user's assistant history entries."""
-        from app.services.llm_service import LLMResponse
-        mock_gen.return_value = LLMResponse(content="Private reply")
+        from app.services.gemini_service import GeminiResponse
+        mock_gen.return_value = GeminiResponse(content="Private reply")
 
         client_a, token_a, user_a_id = _register_user(name="UserA_Hist", email=f"ah-{time.time()}@example.com")
         conv_a_id = _create_conversation(user_a_id)
@@ -885,8 +901,8 @@ class TestAssistantHistory:
     @patch("app.routes.assistant.generate_response")
     def test_existing_field_diagnosis_history_still_works(self, mock_gen):
         """Existing field/diagnosis/recommendation history is not broken."""
-        from app.services.llm_service import LLMResponse
-        mock_gen.return_value = LLMResponse(content="Reply")
+        from app.services.gemini_service import GeminiResponse
+        mock_gen.return_value = GeminiResponse(content="Reply")
 
         client, token, user_id = _register_user(name="ExistingHist")
 
@@ -919,14 +935,14 @@ class TestSystemPromptWeatherRules:
 
     def test_prompt_instructs_to_use_provided_weather(self):
         """When FARMER CONTEXT has weather, the prompt tells the model to use it."""
-        from app.services.llm_service import SYSTEM_PROMPT_BASE
+        from app.services.gemini_service import SYSTEM_PROMPT_BASE
 
         assert "FARMER CONTEXT includes current weather data" in SYSTEM_PROMPT_BASE
         assert "MUST use those exact values" in SYSTEM_PROMPT_BASE
 
     def test_prompt_forbids_denial_when_weather_present(self):
         """The prompt explicitly says not to claim lack of weather access when data exists."""
-        from app.services.llm_service import SYSTEM_PROMPT_BASE
+        from app.services.gemini_service import SYSTEM_PROMPT_BASE
 
         assert "Do NOT say you lack weather access" in SYSTEM_PROMPT_BASE
         assert "Never respond with" in SYSTEM_PROMPT_BASE
@@ -934,13 +950,13 @@ class TestSystemPromptWeatherRules:
 
     def test_prompt_allows_unavailable_only_when_no_weather(self):
         """The prompt says weather may be unavailable only when FARMER CONTEXT has no weather."""
-        from app.services.llm_service import SYSTEM_PROMPT_BASE
+        from app.services.gemini_service import SYSTEM_PROMPT_BASE
 
         assert "Only say weather is unavailable when FARMER CONTEXT does NOT include any weather data" in SYSTEM_PROMPT_BASE
 
     def test_prompt_does_not_ask_for_weather_when_provided(self):
         """The prompt does NOT tell the model to ask the farmer for weather when it's already in FARMER CONTEXT."""
-        from app.services.llm_service import SYSTEM_PROMPT_BASE
+        from app.services.gemini_service import SYSTEM_PROMPT_BASE
 
         # The old contradictory phrase must be gone
         assert "recent weather, etc." not in SYSTEM_PROMPT_BASE
@@ -950,13 +966,13 @@ class TestSystemPromptWeatherRules:
 
     def test_prompt_never_invents_weather(self):
         """The prompt says to never invent weather values."""
-        from app.services.llm_service import SYSTEM_PROMPT_BASE
+        from app.services.gemini_service import SYSTEM_PROMPT_BASE
 
         assert "Never invent weather values" in SYSTEM_PROMPT_BASE
 
     def test_full_prompt_with_weather_contains_all_instructions(self):
         """The complete system prompt (with weather context) contains all weather rules."""
-        from app.services.llm_service import _build_system_prompt
+        from app.services.gemini_service import _build_system_prompt
 
         weather_ctx = (
             "Farmer:\nName: Test\nDistrict: Karachi\n\n"

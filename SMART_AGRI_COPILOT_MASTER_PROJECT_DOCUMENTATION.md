@@ -49,8 +49,8 @@ Smart Agri Copilot unifies AI-powered crop disease diagnosis, localized weather 
 | **Frontend** | React 18, Vite 6, Tailwind CSS 3, React Router 6 |
 | **Backend** | Python 3.13, FastAPI 0.115, SQLAlchemy 2.0 |
 | **Database** | PostgreSQL 15+ (via SQLAlchemy ORM) |
-| **AI — Chat** | Google Gemini (via OpenAI-compatible endpoint) |
-| **AI — Vision** | Google Gemini Vision (native API) |
+| **AI — Chat** | Google Gemini (official `google-genai` SDK) |
+| **AI — Vision** | Google Gemini (official `google-genai` SDK) |
 | **Weather** | WeatherAPI.com |
 | **Auth** | JWT (HS256) + bcrypt password hashing |
 | **Localization** | Custom i18n (English, Urdu, Roman Urdu) |
@@ -241,7 +241,7 @@ Smart Agri Copilot unifies AI-powered crop disease diagnosis, localized weather 
 | **Frontend** | `DiagnosisPage` with `ImageDropzone`, `ImagePreview`, `AnalysisProgress`, `DiagnosisResult`, `PastScans`, `PhotoTipSheet` |
 | **Backend** | `POST /api/diagnosis/analyze` (multipart: image + crop + notes + language) |
 | **Database** | `diagnosis_scans` table |
-| **AI** | Gemini Vision (`gemini-2.0-flash` / configured model) |
+| **AI** | Gemini Vision (`GEMINI_MODEL`, default `gemini-2.5-flash`) |
 | **Status** | **IMPLEMENTED** |
 
 **Diagnosis Pipeline:**
@@ -298,7 +298,7 @@ Smart Agri Copilot unifies AI-powered crop disease diagnosis, localized weather 
 | **Frontend** | `AssistantPage` with `AssistantHeader`, `Composer`, `MessageBubble`, `SuggestedQuestions`, `TypingIndicator`, `LanguageMenu`, `SourcesDisclosure`, `PhotoHandoff` |
 | **Backend** | `POST /api/assistant/chat`, `POST /api/conversations`, `GET /api/conversations`, `GET /api/conversations/{id}`, `DELETE /api/conversations/{id}`, `POST /api/conversations/{id}/messages`, `GET /api/conversations/{id}/messages` |
 | **Database** | `conversations` + `messages` tables |
-| **AI** | Gemini via OpenAI-compatible endpoint (`/chat/completions`) |
+| **AI** | Gemini via the official `google-genai` SDK (`models.generate_content`) |
 | **Status** | **IMPLEMENTED** |
 
 **Context Injection:** The assistant automatically builds a "FARMER CONTEXT" block including:
@@ -540,22 +540,27 @@ The assistant can answer questions about:
 
 | Component | Provider | Model | Purpose |
 |-----------|----------|-------|---------|
-| **AI Assistant (Chat)** | Google Gemini | Configurable (default: `gemini-2.0-flash`) | Conversational farming advice |
-| **Disease Diagnosis (Vision)** | Google Gemini | Configurable (default: `gemini-2.0-flash`) | Leaf image analysis |
+| **AI Assistant (Chat)** | Google Gemini | Configurable via `GEMINI_MODEL` (default: `gemini-2.5-flash`) | Conversational farming advice |
+| **Disease Diagnosis (Vision)** | Google Gemini | Configurable via `GEMINI_MODEL` (default: `gemini-2.5-flash`) | Leaf image analysis |
 
 ### How Gemini Is Used
 
+Both features go through `backend/app/services/gemini_service.py`, which uses Google's
+official Python SDK (`google-genai`) and authenticates with `GEMINI_API_KEY` (request
+header only — the key is never logged and never reaches the frontend).
+
 **Text Generation (AI Assistant):**
-- Endpoint: OpenAI-compatible `POST {LLM_API_BASE}/chat/completions`
-- Auth: `Authorization: Bearer {LLM_API_KEY}`
-- Messages: system prompt (with farmer context) + conversation history + user message
-- Response: `choices[0].message.content`
+- SDK call: `client.models.generate_content(model, contents, config)`
+- `config.system_instruction`: system prompt (with farmer context) + language rule
+- `contents`: conversation history mapped to Gemini roles (`assistant` → `model`) plus the new user turn
+- `temperature` 0.7, `max_output_tokens` 800, 45 s timeout
+- Response: `response.text`
 
 **Vision (Disease Diagnosis):**
-- Endpoint: Native Gemini `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}`
-- Payload: `contents[].parts[]` with text prompt + base64-encoded image (`inline_data`)
-- `generationConfig.responseMimeType: "application/json"` for structured output
-- Response: `candidates[0].content.parts[0].text` → parsed as JSON diagnosis
+- Same SDK call with `contents[].parts[]` = text prompt + image bytes (`Part.from_bytes`)
+- `config.response_mime_type: "application/json"` for structured output
+- `temperature` 0.3, `max_output_tokens` 1024, 60 s timeout
+- Response: `response.text` → parsed as JSON diagnosis
 
 ### AI Flow — Disease Diagnosis
 
@@ -588,7 +593,7 @@ Frontend (AssistantPage)
       → Live weather from WeatherAPI (temperature, condition, humidity, wind, precipitation)
     → Constructs system prompt with context + language instruction
     → POST to LLM endpoint with system prompt + history + user message
-      → LLM returns response
+      → Gemini returns response
     → Persists assistant message to conversation
     → Creates activity history entry (once per conversation)
   → Returns MessageRead to frontend
@@ -639,7 +644,7 @@ Frontend (AssistantPage)
 
 ### Gemini Vision Analysis
 
-- Model: Configurable (default `gemini-2.0-flash`)
+- Model: Configurable via `GEMINI_MODEL` (default `gemini-2.5-flash`)
 - Temperature: 0.3 (low creativity for consistent diagnosis)
 - Max output tokens: 1024
 - Response format: JSON enforced by `responseMimeType`
@@ -1007,7 +1012,7 @@ All errors use a standard envelope:
 | Service | File | Purpose |
 |---------|------|---------|
 | Auth | `auth.py` | Password hashing, JWT, reset tokens, demo migration |
-| LLM | `llm_service.py` | Chat completions (OpenAI-compatible), Gemini Vision, prompt building, response parsing |
+| AI | `gemini_service.py` | Gemini chat generation, Gemini Vision diagnosis, prompt building, response parsing |
 | Weather | `weather_service.py` | WeatherAPI integration, district registry, normalization, caching, advisories |
 | Diagnosis | `diagnosis_service.py` | Image validation, Gemini Vision orchestration, scan persistence |
 | Email | `email_service.py` | Password reset emails (console/SMTP/none providers) |
@@ -1421,7 +1426,7 @@ User → React Frontend → FastAPI Backend → PostgreSQL + Gemini AI + Weather
 ### SCALABILITY
 
 - Backend is a pure REST API — can serve web, mobile, tablet without changes
-- Provider-agnostic LLM service — swap Gemini for any OpenAI-compatible provider
+- Gemini integration via Google's official `google-genai` SDK — one service module, one env var pair (`GEMINI_API_KEY`, `GEMINI_MODEL`)
 - Weather service abstraction — could swap WeatherAPI for another provider
 - Database design supports multi-user, multi-field, multi-crop at scale
 
@@ -1551,7 +1556,7 @@ User → React Frontend → FastAPI Backend → PostgreSQL + Gemini AI + Weather
 | **Solution** | AI-powered web app combining Gemini Vision disease diagnosis, WeatherAPI forecasting, and a context-aware multilingual AI farming assistant |
 | **Target Users** | Smallholder farmers in Pakistan, farm owners, agricultural students, extension officers |
 | **Core Features** | AI leaf diagnosis, AI farming assistant, weather forecasting with advisories, field management, disease library, activity history, recommendations, trilingual UI (EN/UR/Roman UR) |
-| **AI** | Google Gemini — Vision API for image diagnosis + LLM (OpenAI-compatible) for conversational assistant with automatic farmer context injection |
+| **AI** | Google Gemini — official `google-genai` SDK for both image diagnosis and the conversational assistant, with automatic farmer context injection |
 | **Technology** | React 18 + Vite + Tailwind CSS (frontend), FastAPI + SQLAlchemy + Python (backend), PostgreSQL (database) |
 | **Database** | 9 tables: users, fields, diagnosis_scans, diseases, conversations, messages, activity_history, notifications, recommendations |
 | **Top 5 USPs** | 1. Unified AI diagnosis + weather + assistant in one context 2. Trilingual AI assistant with automatic farmer data injection 3. Production-grade Vision pipeline with 3-level JSON parser 4. 50+ district weather with rule-based farming advisories 5. Full-stack architecture ready for mobile conversion |

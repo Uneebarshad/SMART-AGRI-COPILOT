@@ -15,8 +15,12 @@ from app.services.diagnosis_service import (
     analyze_and_persist,
 )
 from app.services.history_service import create_history_event
+<<<<<<< Updated upstream
 from app.services.notification_service import create_notification
 from app.services.llm_service import (
+=======
+from app.services.gemini_service import (
+>>>>>>> Stashed changes
     GeminiConfigurationError,
     GeminiProviderError,
 )

@@ -1,6 +1,6 @@
 import { cn } from '../../lib/cn';
 
-const FRAME = 'rounded-xl border border-soil-200 bg-surface shadow-card';
+const FRAME = 'rounded-2xl border border-soil-200 bg-surface shadow-card';
 
 /**
  * Surface container (design-system.md): white card, 1px soil border,
@@ -16,8 +16,8 @@ export function Card({ onClick, type = 'button', className, children, ...props }
         onClick={onClick}
         className={cn(
           FRAME,
-          'block w-full p-4 text-start transition-[border-color,box-shadow] duration-150',
-          'hover:border-soil-300 dark:hover:border-soil-300 hover:shadow-raised',
+          'block w-full p-4 text-start transition-[border-color,box-shadow,transform] duration-200',
+          'hover:border-field-500/40 hover:shadow-raised dark:hover:border-field-500/30',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-500 focus-visible:ring-offset-2',
           'md:p-5',
           className,

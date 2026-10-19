@@ -221,15 +221,20 @@ export function fetchConversationMessages(conversationId) {
   });
 }
 
+<<<<<<< Updated upstream
 // ---------------------------------------------------------------------------
 // Notification endpoints (backend routes/notifications.py)
 // ---------------------------------------------------------------------------
 
 /** Full inbox for the current user, newest first (NotificationRead list). */
+=======
+/** Notifications (user-scoped): unread-first list feeding the bell + alerts. */
+>>>>>>> Stashed changes
 export function fetchNotifications() {
   return request('/notifications', { timeoutMs: 10000 });
 }
 
+<<<<<<< Updated upstream
 /** Mark a single notification read; returns the updated row. */
 export function markNotificationReadRequest(notificationId) {
   return request(`/notifications/${notificationId}/read`, { method: 'PATCH' });
@@ -238,6 +243,12 @@ export function markNotificationReadRequest(notificationId) {
 /** Mark the whole inbox read; returns `{ updated }`. */
 export function markAllNotificationsReadRequest() {
   return request('/notifications/read-all', { method: 'PATCH' });
+=======
+export function markNotificationRead(notificationId) {
+  return request(`/notifications/${encodeURIComponent(notificationId)}/read`, {
+    method: 'PATCH',
+  });
+>>>>>>> Stashed changes
 }
 
 /**

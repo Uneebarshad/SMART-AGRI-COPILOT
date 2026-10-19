@@ -1,4 +1,4 @@
-"""Assistant chat endpoint — LLM-powered conversational agriculture copilot."""
+"""Assistant chat endpoint — Gemini-powered conversational agriculture copilot."""
 
 import logging
 
@@ -13,9 +13,9 @@ from app.models.history import ActivityHistory
 from app.models.user import User
 from app.schemas import MessageRead
 from app.services.history_service import create_history_event
-from app.services.llm_service import (
-    LLMConfigurationError,
-    LLMProviderError,
+from app.services.gemini_service import (
+    GeminiConfigurationError,
+    GeminiProviderError,
     generate_response,
 )
 from app.services.weather_service import (
@@ -81,7 +81,7 @@ def chat(
         for msg in reversed(prior_messages)
     ]
 
-    # -- Call the LLM service ------------------------------------------------
+    # -- Call the Gemini service (google-genai SDK) ---------------------------
     context = _build_assistant_context(user)
     logger.info(
         "Assistant context: user=%s district=%r context_len=%d has_weather=%s",
@@ -95,15 +95,15 @@ def chat(
             language=language,
             context=context,
         )
-    except LLMConfigurationError:
-        logger.error("LLM service not configured")
+    except GeminiConfigurationError:
+        logger.error("Gemini service not configured (GEMINI_API_KEY missing)")
         return error_response(
             503,
             "llm_not_configured",
             "The AI assistant is not configured yet. Please try again later.",
         )
-    except LLMProviderError as exc:
-        logger.error("LLM provider error: %s", exc)
+    except GeminiProviderError as exc:
+        logger.error("Gemini provider error: %s", exc)
         return error_response(
             502,
             "llm_provider_error",

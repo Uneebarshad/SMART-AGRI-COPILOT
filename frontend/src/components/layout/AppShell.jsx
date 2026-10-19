@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { useT } from '../../i18n/useT';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
+import { TopBar } from './TopBar';
 import { BottomNav } from './BottomNav';
 import { MobileMenuSheet } from './MobileMenuSheet';
 import { RouteFallback } from './RouteFallback';
@@ -44,9 +45,12 @@ export function AppShell() {
 
       <Sidebar className="hidden lg:flex" />
       <Navbar className="lg:hidden" onMenuOpen={() => setMenuOpen(true)} />
+      {/* Desktop top bar: fixed, offset past the sidebar; its popover layer
+          (z-30) stays below the sidebar (z-40) but above page content. */}
+      <TopBar className="hidden lg:flex lg:fixed lg:inset-x-0 lg:top-0 lg:z-30 lg:ps-64" />
 
-      <main id="main" tabIndex={-1} className="outline-none lg:ps-64">
-        <div className="mx-auto max-w-6xl p-4 pb-24 md:p-6 md:pb-24 lg:p-8 lg:pb-8">
+      <main id="main" tabIndex={-1} className="outline-none lg:ps-64 lg:pt-16">
+        <div className="mx-auto max-w-7xl p-4 pb-24 md:p-6 md:pb-24 lg:p-8 lg:pb-8">
           <Suspense fallback={<RouteFallback />}>
             <Outlet />
           </Suspense>
