@@ -3,14 +3,10 @@ import { cn } from '../../lib/cn';
 import { useT } from '../../i18n/useT';
 import { useAuth } from '../../auth/AuthProvider';
 import { BrandMark } from './BrandMark';
-<<<<<<< Updated upstream
 import { NotificationBell } from '../notifications/NotificationBell';
-import { NAV_ITEMS, SECONDARY_ITEMS } from './navItems';
-=======
 import { SIDEBAR_ITEMS } from './navItems';
 import { SettingsIcon } from '../ui/icons/SettingsIcon';
 import { LogoutIcon } from '../ui/icons/LogoutIcon';
->>>>>>> Stashed changes
 import { UserIcon } from '../ui/icons/UserIcon';
 import { LeafIcon } from '../ui/icons/LeafIcon';
 

@@ -25,10 +25,6 @@ const ThemeContext = createContext(null);
 export function ThemeProvider({ children }) {
   const [preference, setPreference] = useState(() => {
     const stored = storage.get(THEME_KEY);
-<<<<<<< Updated upstream
-=======
-    // Dark forest-green is the product's signature look (matches login/welcome).
->>>>>>> Stashed changes
     return stored && VALID_THEMES.includes(stored) ? stored : 'dark';
   });
 

@@ -9,7 +9,7 @@ import { BellIcon } from '../ui/icons/BellIcon';
 import { ChartIcon } from '../ui/icons/ChartIcon';
 import { BugIcon } from '../ui/icons/BugIcon';
 import { HomeIcon } from '../ui/icons/HomeIcon';
-import { BellIcon } from '../ui/icons/BellIcon';
+import { CalendarIcon } from '../ui/icons/CalendarIcon';
 
 /**
  * Single source of navigation structure (frontend-spec.md §4.3).

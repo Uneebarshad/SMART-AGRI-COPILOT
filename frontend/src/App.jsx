@@ -161,12 +161,8 @@ export default function App() {
                   <Route path="recommendations" element={<RecommendationsPage />} />
                   <Route path="diseases" element={<DiseasesPage />} />
                   <Route path="diseases/:id" element={<DiseaseDetailPage />} />
-<<<<<<< Updated upstream
                   <Route path="history" element={<Navigate to="/conversations" replace />} />
                   <Route path="conversations" element={<HistoryPage />} />
-=======
-                  <Route path="history" element={<HistoryPage />} />
->>>>>>> Stashed changes
                   <Route path="notifications" element={<NotificationsPage />} />
                 </Route>
               </Routes>
