@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../components/layout/PageHeader';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { useT } from '../i18n/useT';
 import { DiseaseCard } from '../components/diseases/DiseaseCard';
 import { DiseaseDetailDrawer } from '../components/diseases/DiseaseDetailDrawer';
 import { Badge, Button, ButtonLink, Card, EmptyState, ErrorState, SelectField, Skeleton, TextField } from '../components/ui';
@@ -125,6 +127,8 @@ function DiseasesSkeleton() {
 }
 
 export function DiseasesPage() {
+  const { t } = useT();
+  usePageTitle(t('diseases.title'));
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [selectedDisease, setSelectedDisease] = useState(null);
   const [allDiseases, setAllDiseases] = useState([]);

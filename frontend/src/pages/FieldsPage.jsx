@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../components/layout/PageHeader';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { Button, Card, EmptyState, ErrorState, SelectField, Skeleton, StatCard, StatCardSkeleton, Banner } from '../components/ui';
 import { FieldCard } from '../components/fields/FieldCard';
 import { FieldDetailsDrawer } from '../components/fields/FieldDetailsDrawer';
@@ -39,6 +40,7 @@ function FieldCardsSkeleton() {
 }
 
 export function FieldsPage() {
+  usePageTitle('My fields');
   const [fields, setFields] = useState([]);
   const [loadStatus, setLoadStatus] = useState('loading');
   const [search, setSearch] = useState('');
@@ -156,7 +158,7 @@ export function FieldsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
               <StatCard icon={MapPinIcon} label="Total fields" value={overview.total} />
-              <StatCard icon={ChartIcon} label="Cultivated area" value={overview.area} unit="acres" />
+              <StatCard icon={ChartIcon} label="Cultivated area" value={overview.area} unit="ha" />
               <StatCard icon={SproutIcon} label="Active crops" value={overview.crops} />
               <StatCard icon={AlertTriangleIcon} label="Need attention" value={overview.attention} trendTone="negative" />
             </div>

@@ -34,7 +34,7 @@ function CardLeaf() {
     <svg
       viewBox="0 0 64 64"
       aria-hidden="true"
-      className="pointer-events-none absolute -bottom-3 -end-2 h-16 w-16 text-field-500/12 dark:text-field-400/15"
+      className="pointer-events-none absolute -bottom-3 -end-2 h-16 w-16 text-field-600/15 dark:text-field-400/15"
     >
       <path d="M52 8C30 10 14 24 12 48c22-2 38-16 40-40Z" fill="currentColor" />
       <path d="M12 48C24 36 36 26 50 12" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.6" />

@@ -1,4 +1,5 @@
 import { Card } from '../ui';
+import { relativeTime } from '../../lib/format';
 import { CalendarIcon } from '../ui/icons/CalendarIcon';
 import { ChartIcon } from '../ui/icons/ChartIcon';
 import { EditIcon } from '../ui/icons/EditIcon';
@@ -8,10 +9,14 @@ import { SproutIcon } from '../ui/icons/SproutIcon';
 import { TrashIcon } from '../ui/icons/TrashIcon';
 import { FieldStatusChip } from './FieldStatusChip';
 
-const formatDate = (date) =>
-  new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(
-    new Date(`${date}T00:00:00`),
-  );
+// Fields can be created without dates; never hand `null`/"" to Date here —
+// an Invalid Date makes Intl.DateTimeFormat.format() throw and unmount the app.
+const formatDate = (date) => {
+  if (!date) return 'Not set';
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return 'Not set';
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(parsed);
+};
 
 export function FieldCard({ field, onOpen, onEdit, onDelete }) {
   return (
@@ -39,7 +44,7 @@ export function FieldCard({ field, onOpen, onEdit, onDelete }) {
             <p className="flex items-center gap-1.5 text-xs text-soil-500">
               <ChartIcon className="h-3.5 w-3.5" /> Area
             </p>
-            <p className="mt-1 text-sm font-semibold text-soil-800">{field.area} acres</p>
+            <p className="mt-1 text-sm font-semibold text-soil-800">{field.area} ha</p>
           </div>
           <div>
             <p className="flex items-center gap-1.5 text-xs text-soil-500">
@@ -67,7 +72,7 @@ export function FieldCard({ field, onOpen, onEdit, onDelete }) {
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-soil-100 dark:border-soil-200 pt-3">
         <div>
           <FieldStatusChip status={field.status} />
-          <p className="mt-2 text-xs text-soil-500">Updated {field.lastUpdated}</p>
+          <p className="mt-2 text-xs text-soil-500">Updated {relativeTime(field.lastUpdated) || '—'}</p>
         </div>
         <div className="flex items-center gap-1">
           <button

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../components/layout/PageHeader';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { RecommendationDetailsDrawer } from '../components/recommendations/RecommendationDetailsDrawer';
 import { RecommendationListCard } from '../components/recommendations/RecommendationListCard';
 import { CATEGORY_LABELS, PRIORITY_LABELS, STATUS_LABELS } from '../components/recommendations/recommendationPresentation';
@@ -15,7 +16,8 @@ const CATEGORY_OPTIONS = Object.entries(CATEGORY_LABELS).map(([value, label]) =>
 const PRIORITY_OPTIONS = Object.entries(PRIORITY_LABELS).map(([value, label]) => ({ value, label }));
 const STATUS_OPTIONS = Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }));
 
-const formatCount = (value) => value.toString().padStart(2, '0');
+// Zero renders plainly; "00" reads like a data glitch on an empty account.
+const formatCount = (value) => (value === 0 ? '0' : value.toString().padStart(2, '0'));
 
 function RecommendationSummary({ recommendations }) {
   const summary = {
@@ -71,6 +73,7 @@ function RecommendationsSkeleton() {
 }
 
 export function RecommendationsPage() {
+  usePageTitle('Recommendations');
   const [recommendations, setRecommendations] = useState([]);
   const [loadStatus, setLoadStatus] = useState('loading');
   const [filters, setFilters] = useState({ category: '', priority: '', crop: '', field: '', status: '' });

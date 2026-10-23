@@ -124,10 +124,10 @@
    important icons, buttons and links (≈15–25% of the interface). Soil scale is
    redefined so high numbers = light text, low numbers = blue-gray surfaces. */
 .dark {
-  --agri-page-bg: 9 15 30;      /* #090F1E deep navy */
-  --agri-surface: 20 30 51;     /* #141E33 blue-gray card */
-  --agri-nav: 12 20 40;         /* #0C1428 dark blue sidebar */
-  --agri-elevated: 27 39 63;    /* #1B273F elevated blue-gray */
+  --agri-page-bg: 11 18 32;     /* #0B1220 deep navy (reference background) */
+  --agri-surface: 25 38 58;     /* #19263A navy card (reference card) */
+  --agri-nav: 17 28 46;         /* #111C2E navy sidebar (reference sidebar) */
+  --agri-elevated: 30 42 63;    /* #1E2A3F elevated navy */
 
   /* Brand greens — primary #39D353 / secondary #72E06F. */
   --agri-field-50: 8 32 22;
@@ -157,8 +157,8 @@
   /* Dark-mode soil: blue-gray neutral ramp (subtle blue tint, not charcoal).
      50-300 = navy surfaces / blue-gray borders, 400-950 = text (progressively
      lighter, ending near-white). */
-  --agri-soil-50: 9 15 30;
-  --agri-soil-100: 20 30 51;
+  --agri-soil-50: 11 18 32;
+  --agri-soil-100: 25 38 58;
   --agri-soil-200: 32 44 68;
   --agri-soil-300: 48 63 92;
   --agri-soil-400: 110 124 150;
@@ -266,6 +266,20 @@
   select,
   textarea {
     -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Hide a scroll bar while keeping the element scrollable (sidebar).
+   Chrome / Edge / Safari via the pseudo-element, Firefox via scrollbar-width,
+   legacy Edge / IE via -ms-overflow-style. */
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
 

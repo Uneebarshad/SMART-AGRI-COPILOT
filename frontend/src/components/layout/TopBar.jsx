@@ -6,7 +6,7 @@ import { useAuth } from '../../auth/AuthProvider';
 import { fetchNotifications } from '../../services/api';
 import { SearchIcon } from '../ui/icons/SearchIcon';
 import { BellIcon } from '../ui/icons/BellIcon';
-import { UserIcon } from '../ui/icons/UserIcon';
+import { UserAvatar } from '../ui/UserAvatar';
 import { ChevronDownIcon } from '../ui/icons/ChevronDownIcon';
 
 /**
@@ -60,7 +60,7 @@ export function TopBar({ className }) {
   };
 
   return (
-    <header className={cn('border-b border-soil-200 bg-surface/95 backdrop-blur dark:bg-[#0b2224]/85', className)}>
+    <header className={cn('border-b border-soil-200 bg-surface/95 backdrop-blur dark:bg-page/85', className)}>
       <div className="flex h-16 items-center gap-3 px-4 md:gap-5 md:px-6 lg:px-8">
         {/* Search — routes into the AI assistant */}
         <form onSubmit={handleSearch} className="relative hidden min-w-0 flex-1 md:block lg:max-w-xl" role="search">
@@ -75,7 +75,7 @@ export function TopBar({ className }) {
               'h-11 w-full rounded-xl border border-soil-200 bg-page ps-10 pe-4 text-sm text-soil-900',
               'placeholder:text-soil-400 transition-[border-color,box-shadow] duration-200',
               'hover:border-soil-300 focus:border-field-500 focus:outline-none focus:ring-2 focus:ring-field-500/30',
-              'dark:border-soil-200 dark:bg-[#0d2929] dark:text-soil-950 dark:placeholder:text-soil-500 dark:hover:border-soil-300',
+              'dark:border-soil-200 dark:bg-surface dark:text-soil-950 dark:placeholder:text-soil-500 dark:hover:border-soil-300',
             )}
           />
         </form>
@@ -99,7 +99,7 @@ export function TopBar({ className }) {
               {unreadCount > 0 && (
                 <span
                   aria-hidden="true"
-                  className="absolute end-2 top-2 h-2.5 w-2.5 rounded-full bg-field-500 ring-2 ring-surface dark:bg-field-400 dark:ring-[#0b2224]"
+                  className="absolute end-2 top-2 h-2.5 w-2.5 rounded-full bg-field-500 ring-2 ring-surface dark:bg-field-400 dark:ring-page"
                 />
               )}
             </button>
@@ -110,7 +110,7 @@ export function TopBar({ className }) {
                 aria-label={t('topbar.notificationsAria')}
                 className={cn(
                   'absolute end-0 top-12 z-50 w-80 overflow-hidden rounded-2xl border border-soil-200 bg-surface shadow-raised',
-                  'dark:border-soil-200 dark:bg-[#0d2929]',
+                  'dark:border-soil-200 dark:bg-elevated',
                 )}
               >
                 <p className="border-b border-soil-100 px-4 py-3 text-sm font-semibold text-soil-900 dark:border-soil-200 dark:text-soil-950">
@@ -160,12 +160,10 @@ export function TopBar({ className }) {
 
           {/* Signed-in farmer identity */}
           <div className="flex items-center gap-2.5 rounded-full ps-1 pe-2 py-1">
-            <span
-              aria-hidden="true"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-field-600 text-white dark:bg-gradient-to-br dark:from-field-500 dark:to-field-600 dark:text-[#04120E]"
-            >
-              <UserIcon className="h-5 w-5" />
-            </span>
+            <UserAvatar
+              src={user?.preferences?.avatar || null}
+              fallbackClassName="bg-field-600 text-white dark:bg-gradient-to-br dark:from-field-500 dark:to-field-600 dark:text-[#04120E]"
+            />
             <span className="hidden min-w-0 sm:block">
               <span className="block max-w-40 truncate text-sm font-semibold text-soil-900 dark:text-soil-950">{displayName}</span>
               <span className="block text-xs text-soil-500 dark:text-soil-600">{t('topbar.role')}</span>

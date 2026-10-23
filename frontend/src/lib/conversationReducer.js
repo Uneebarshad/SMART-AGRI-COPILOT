@@ -42,6 +42,11 @@ export function conversationReducer(state, action) {
     // `stored: true` records that the row already exists server-side, so a
     // later retry of a failed exchange must NOT persist the user message a
     // second time (duplicate bubbles after resume).
+    //
+    // sendStatus stays 'pending' here: storage is only the FIRST leg of the
+    // exchange. The AI call is still in flight, so the typing indicator and
+    // composer lock must persist until 'sent' or 'failed' resolves the
+    // request (a fast 1s storage ack must not end the processing state).
     case 'stored':
       return {
         ...state,
@@ -51,7 +56,7 @@ export function conversationReducer(state, action) {
             ? { ...message, status: 'sent', stored: true, createdAt: action.createdAt ?? message.createdAt }
             : message,
         ),
-        sendStatus: 'idle',
+        sendStatus: 'pending',
       };
 
     // Answer arrived: the user message is confirmed and the assistant

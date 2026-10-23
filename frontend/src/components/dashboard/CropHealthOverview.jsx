@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useT } from '../../i18n/useT';
 import { cn } from '../../lib/cn';
-import { formatNumber } from '../../lib/format';
+import { formatNumber, relativeTime } from '../../lib/format';
 import { Badge, ButtonLink, ErrorState, Skeleton } from '../ui';
 import { SproutIcon } from '../ui/icons/SproutIcon';
 import { PlusIcon } from '../ui/icons/PlusIcon';
@@ -53,13 +53,12 @@ function FieldIllustration() {
   );
 }
 
-function FieldRow({ field, scan, lang }) {
+function FieldRow({ field, lang }) {
   const { t } = useT();
-  const health = !scan
-    ? { tone: 'neutral', label: t('home.notChecked') }
-    : scan.is_healthy
-      ? { tone: 'success', label: t('home.scanHealthy') }
-      : { tone: 'warning', label: t('home.needsAttention') };
+  // Real, stored field state only. We never infer a field's health from an
+  // unrelated global scan — a field with no dedicated check shows its growth
+  // stage (neutral), never a fabricated "healthy" badge.
+  const stage = field.growth_stage || field.status;
 
   return (
     <li>
@@ -80,7 +79,7 @@ function FieldRow({ field, scan, lang }) {
             {field.crop ?? t('home.noCrop')} · {formatNumber(field.area_ha, lang)} {t('home.areaUnit')}
           </p>
         </div>
-        <Badge tone={health.tone} className="shrink-0">{health.label}</Badge>
+        {stage && <Badge tone="neutral" className="shrink-0">{stage}</Badge>}
         <ChevronRightIcon className="h-4 w-4 shrink-0 text-soil-400 transition-transform duration-150 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:-scale-x-100" />
       </Link>
     </li>
@@ -115,6 +114,35 @@ export function CropHealthOverview({ status, fields, latestScan, onRetry }) {
         </Link>
       </div>
 
+      {/* The one real check we have — the latest leaf scan — surfaced once,
+          honestly, instead of being smeared across every field row. */}
+      {status === 'success' && latestScan && (
+        <div className="px-5 pb-3">
+          <Link
+            to={`/diagnosis/${latestScan.scan_id}`}
+            className={cn(
+              'flex items-center gap-2.5 rounded-lg border border-soil-200 px-3 py-2 text-xs transition-colors duration-150',
+              'hover:border-field-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-500',
+              'dark:border-soil-200',
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className={cn('h-2 w-2 shrink-0 rounded-full', latestScan.is_healthy ? 'bg-field-500' : 'bg-sun-500')}
+            />
+            <span className="min-w-0 flex-1 truncate text-soil-500 dark:text-soil-600">
+              {t('home.latestCheck')}:{' '}
+              <span className="font-semibold text-soil-900 dark:text-soil-950">
+                {latestScan.is_healthy ? t('home.scanHealthy') : latestScan.disease || t('home.needsAttention')}
+              </span>
+            </span>
+            {latestScan.scanned_at && (
+              <span className="shrink-0 text-soil-500 dark:text-soil-600">{relativeTime(latestScan.scanned_at, lang)}</span>
+            )}
+          </Link>
+        </div>
+      )}
+
       {status === 'loading' && (
         <div className="flex flex-col gap-3 px-5 pb-5">
           {[0, 1, 2].map((key) => (
@@ -145,7 +173,7 @@ export function CropHealthOverview({ status, fields, latestScan, onRetry }) {
       {status === 'success' && fields?.length > 0 && (
         <ul className="flex flex-col gap-1 px-2 pb-3">
           {fields.map((field) => (
-            <FieldRow key={field.id} field={field} scan={latestScan} lang={lang} />
+            <FieldRow key={field.id} field={field} lang={lang} />
           ))}
         </ul>
       )}

@@ -10,11 +10,16 @@ import { TrashIcon } from '../ui/icons/TrashIcon';
 import { Button } from '../ui';
 import { FieldDrawer } from './FieldDrawer';
 import { FieldStatusChip } from './FieldStatusChip';
+import { relativeTime } from '../../lib/format';
 
-const formatDate = (date) =>
-  new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(
-    new Date(`${date}T00:00:00`),
-  );
+// Dates are optional on stored fields; guard so an empty value can never
+// produce an Invalid Date (Intl.format throws and unmounts the app).
+const formatDate = (date) => {
+  if (!date) return 'Not set';
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return 'Not set';
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(parsed);
+};
 
 function InfoRow({ label, value, Icon }) {
   return (
@@ -51,12 +56,13 @@ export function FieldDetailsDrawer({ field, onClose, onEdit, onDelete }) {
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <FieldStatusChip status={field.status} />
-          <span className="text-xs text-soil-500">Updated {field.lastUpdated}</span>
+          <span className="text-xs text-soil-500">Updated {relativeTime(field.lastUpdated) || '—'}</span>
         </div>
 
         <dl className="rounded-lg border border-soil-200 dark:border-soil-200 bg-soil-50 dark:bg-soil-200 px-4">
           <InfoRow label="Location" value={field.location} Icon={MapPinIcon} />
-          <InfoRow label="Area" value={`${field.area} acres`} />
+          {/* Stored value is hectares (area_ha) — keep the unit honest. */}
+          <InfoRow label="Area" value={`${field.area} ha`} />
           <InfoRow label="Crop" value={field.crop} Icon={SproutIcon} />
           <InfoRow label="Growth stage" value={field.growthStage} />
           <InfoRow label="Planting date" value={formatDate(field.plantingDate)} Icon={CalendarIcon} />

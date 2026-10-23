@@ -192,6 +192,11 @@ def get_dashboard(
                 "name": field.name,
                 "crop_localized": localized(field.crop),
                 "area_ha": field.area_ha,
+                # Real, stored field state — surfaced so the overview shows
+                # genuine per-field info instead of inferring health from a
+                # single unrelated leaf scan.
+                "status": field.status,
+                "growth_stage": field.growth_stage,
             }
             for field in fields
         ],

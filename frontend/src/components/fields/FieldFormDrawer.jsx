@@ -101,7 +101,7 @@ export function FieldFormDrawer({ open, field, onClose, onSave }) {
         <TextField label="Field name" required value={form.name} onChange={update('name')} error={errors.name} placeholder="e.g. South orchard" />
         <TextField label="Location" required value={form.location} onChange={update('location')} error={errors.location} placeholder="e.g. Block C · Lahore" />
         <div className="grid gap-5 sm:grid-cols-2">
-          <TextField label="Area (acres)" required type="number" min="0.1" step="0.1" value={form.area} onChange={update('area')} error={errors.area} placeholder="0.0" />
+          <TextField label="Area (hectares)" required type="number" min="0.1" step="0.1" value={form.area} onChange={update('area')} error={errors.area} placeholder="0.0" />
           <SelectField label="Crop" required value={form.crop} onChange={update('crop')} error={errors.crop} placeholder="Choose a crop" options={CROP_OPTIONS} />
         </div>
         <div className="grid gap-5 sm:grid-cols-2">

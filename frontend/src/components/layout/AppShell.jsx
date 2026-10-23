@@ -7,6 +7,7 @@ import { TopBar } from './TopBar';
 import { BottomNav } from './BottomNav';
 import { MobileMenuSheet } from './MobileMenuSheet';
 import { RouteFallback } from './RouteFallback';
+import { ErrorBoundary } from './ErrorBoundary';
 import { NotificationsProvider } from '../../notifications/NotificationsProvider';
 
 /**
@@ -52,7 +53,9 @@ export function AppShell() {
       <main id="main" tabIndex={-1} className="outline-none lg:ps-64 lg:pt-16">
         <div className="mx-auto max-w-7xl p-4 pb-24 md:p-6 md:pb-24 lg:p-8 lg:pb-8">
           <Suspense fallback={<RouteFallback />}>
-            <Outlet />
+            <ErrorBoundary>
+              <Outlet />
+            </ErrorBoundary>
           </Suspense>
         </div>
       </main>

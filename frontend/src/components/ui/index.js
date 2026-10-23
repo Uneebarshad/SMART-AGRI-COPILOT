@@ -16,3 +16,4 @@ export { StatCard } from './StatCard';
 export { Skeleton, StatCardSkeleton } from './Skeleton';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
+export { UserAvatar } from './UserAvatar';

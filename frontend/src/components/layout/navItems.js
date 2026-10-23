@@ -37,7 +37,9 @@ export const SECONDARY_ITEMS = [
 /**
  * Desktop sidebar order mirrors the reference design: the whole product
  * surface in one list. Every path is an existing route — Conversations
- * lands on the history list and Notifications on its own page.
+ * lands on the history list. Notifications is intentionally NOT listed
+ * here: the header bell (and the sidebar's own bell) is the access point,
+ * and dropping the duplicate row keeps the list inside laptop heights.
  */
 export const SIDEBAR_ITEMS = [
   { id: 'home', path: '/', labelKey: 'nav.dashboard', icon: HomeIcon },
@@ -47,5 +49,4 @@ export const SIDEBAR_ITEMS = [
   { id: 'crop-recommendation', path: '/crop-recommendation', labelKey: 'nav.recommendations', icon: ChartIcon },
   { id: 'weather', path: '/weather', labelKey: 'nav.weather', icon: CloudRainIcon },
   { id: 'history', path: '/history', labelKey: 'nav.conversations', icon: CalendarIcon },
-  { id: 'notifications', path: '/notifications', labelKey: 'nav.notifications', icon: BellIcon },
 ];

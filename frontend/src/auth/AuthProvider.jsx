@@ -129,6 +129,14 @@ export function AuthProvider({ children }) {
     setStatus('idle');
   }, []);
 
+  // Re-read the backend profile so in-place changes (e.g. a new avatar saved
+  // in Settings) reach every `useAuth().user` consumer without re-login.
+  const refreshUser = useCallback(async () => {
+    const data = await fetchCurrentUser();
+    setUser(data);
+    return data;
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -140,8 +148,9 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
+      refreshUser,
     }),
-    [user, token, status, districtSyncStatus, login, register, logout],
+    [user, token, status, districtSyncStatus, login, register, logout, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

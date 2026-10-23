@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useT } from '../i18n/useT';
 import { LANGUAGES } from '../i18n/I18nProvider';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { useTheme } from '../theme/useTheme';
 import { useAppSettings } from '../settings/useAppSettings';
+import { useAuth } from '../auth/AuthProvider';
 import { useUserProfile, fromBackendPrefs, toBackendPrefs } from '../hooks/useUserProfile';
+import { resizeAvatarToDataUrl } from '../lib/avatarImage';
 import { DISTRICTS, districtName } from '../lib/districts';
 import { PageHeader } from '../components/layout/PageHeader';
 import {
@@ -173,10 +176,12 @@ function getInitials(name) {
 /** Settings (`/settings`) — farmer profile & preferences via backend API. */
 export function SettingsPage() {
   const { t, lang, setLang } = useT();
+  usePageTitle(t('settings.title'));
   const location = useLocation();
   const { district: appDistrict, setDistrict: setAppDistrict } = useAppSettings();
   const { theme, setTheme } = useTheme();
   const { user, status: loadStatus, error: loadError, save: patchUser, retry: retryLoad } = useUserProfile();
+  const { refreshUser } = useAuth();
 
   /* -- Local form state (initialized from defaults, then hydrated from backend) -- */
   const [profileName, setProfileName] = useState('');
@@ -254,6 +259,63 @@ export function SettingsPage() {
     setFeedback('');
   }, []);
 
+  /* -- Profile photo (stored as a small data URL inside backend preferences) -- */
+  const avatarInputRef = useRef(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
+  const [avatarImgFailed, setAvatarImgFailed] = useState(false);
+  const savedAvatar = user?.preferences?.avatar || null;
+  const displayAvatar = avatarPreview || savedAvatar;
+
+  // A new saved photo gets another chance to render.
+  useEffect(() => {
+    setAvatarImgFailed(false);
+  }, [savedAvatar]);
+
+  const handlePickAvatar = useCallback(async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // allow re-picking the same file
+    if (!file) return;
+    setAvatarError('');
+    try {
+      // Validation + 128px square resize happen locally; preview before save.
+      setAvatarPreview(await resizeAvatarToDataUrl(file));
+    } catch (err) {
+      setAvatarError(err?.message || 'This image could not be read. Please try another file.');
+    }
+  }, []);
+
+  const persistAvatar = useCallback(
+    async (value) => {
+      setAvatarBusy(true);
+      setAvatarError('');
+      try {
+        // The backend merges preferences, so other settings are untouched;
+        // refreshUser() pushes the change to the header and sidebar avatars.
+        await patchUser({ preferences: { avatar: value } });
+        await refreshUser();
+        setAvatarPreview(null);
+        setFeedbackTone('success');
+        setFeedback(value ? 'Profile photo updated.' : 'Profile photo removed.');
+      } catch {
+        setAvatarError('Could not save your photo. Please try again.');
+      } finally {
+        setAvatarBusy(false);
+      }
+    },
+    [patchUser, refreshUser],
+  );
+
+  const handleSaveAvatar = useCallback(() => {
+    if (avatarPreview) persistAvatar(avatarPreview);
+  }, [avatarPreview, persistAvatar]);
+
+  const handleRemoveAvatar = useCallback(() => {
+    setAvatarPreview(null);
+    if (savedAvatar) persistAvatar(null);
+  }, [savedAvatar, persistAvatar]);
+
   /* -- Language change: apply instantly, sync to backend on next save -- */
   const handleLangChange = useCallback(
     (newLang) => {
@@ -305,9 +367,18 @@ export function SettingsPage() {
             >
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-field-100 font-display text-xl font-semibold text-field-800 dark:bg-field-900/20 dark:text-field-400">
-                    {getInitials(profileName)}
-                  </div>
+                  {displayAvatar && !avatarImgFailed ? (
+                    <img
+                      src={displayAvatar}
+                      alt="Your profile photo"
+                      onError={() => setAvatarImgFailed(true)}
+                      className="h-16 w-16 shrink-0 rounded-full object-cover ring-1 ring-inset ring-field-500/25"
+                    />
+                  ) : (
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-field-100 font-display text-xl font-semibold text-field-800 dark:bg-field-900/20 dark:text-field-400">
+                      {getInitials(profileName)}
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <p className="truncate text-base font-semibold text-soil-900">
                       {profileName || 'Farmer'}
@@ -315,6 +386,33 @@ export function SettingsPage() {
                     <p className="truncate text-sm text-soil-600">
                       {profileEmail || 'No email set'}
                     </p>
+                    {/* Photo management — preview first, then Save or Remove. */}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        onChange={handlePickAvatar}
+                        className="hidden"
+                        aria-label="Choose a profile photo"
+                      />
+                      <Button type="button" variant="outline" size="sm" onClick={() => avatarInputRef.current?.click()} disabled={avatarBusy}>
+                        Change photo
+                      </Button>
+                      {avatarPreview && (
+                        <Button type="button" size="sm" onClick={handleSaveAvatar} disabled={avatarBusy}>
+                          {avatarBusy ? 'Saving...' : 'Save photo'}
+                        </Button>
+                      )}
+                      {(savedAvatar || avatarPreview) && (
+                        <Button type="button" variant="ghost" size="sm" onClick={handleRemoveAvatar} disabled={avatarBusy}>
+                          Remove photo
+                        </Button>
+                      )}
+                    </div>
+                    {avatarError && (
+                      <p role="alert" className="mt-1.5 text-xs font-medium text-rust-700 dark:text-rust-400">{avatarError}</p>
+                    )}
                   </div>
                 </div>
                 <Button

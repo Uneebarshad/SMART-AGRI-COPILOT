@@ -4,7 +4,7 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import { useAuth } from '../auth/AuthProvider';
 import { useT } from '../i18n/useT';
 import { DISTRICTS, districtName } from '../lib/districts';
-import { formatDate, formatNumber } from '../lib/format';
+import { formatDate, formatNumber, relativeTime } from '../lib/format';
 import { Card, ErrorState, StatCard, StatCardSkeleton } from '../components/ui';
 import { AlertsWidget } from '../components/dashboard/AlertsWidget';
 import { CropHealthOverview } from '../components/dashboard/CropHealthOverview';
@@ -12,7 +12,6 @@ import { QuickActions } from '../components/dashboard/QuickActions';
 import { RecentActivity } from '../components/dashboard/RecentActivity';
 import { RecommendationsWidget } from '../components/dashboard/RecommendationsWidget';
 import { WeatherNow } from '../components/dashboard/WeatherNow';
-import { AiInsightsWidget } from '../components/dashboard/AiInsightsWidget';
 import { MapPinIcon } from '../components/ui/icons/MapPinIcon';
 import { LeafIcon } from '../components/ui/icons/LeafIcon';
 import { SproutIcon } from '../components/ui/icons/SproutIcon';
@@ -22,36 +21,13 @@ import { CloudRainIcon } from '../components/ui/icons/CloudRainIcon';
 import { ChevronRightIcon } from '../components/ui/icons/ChevronRightIcon';
 import { CalendarIcon } from '../components/ui/icons/CalendarIcon';
 import { useDashboard } from '../hooks/useDashboard';
+import fieldHero from '../assets/field-hero.jpg';
 
 function greetingKey(date, t) {
   const hour = date.getHours();
   if (hour < 12) return t('home.greetingMorning');
   if (hour < 17) return t('home.greetingAfternoon');
   return t('home.greetingEvening');
-}
-
-/** Decorative hero foliage — subtle, brand-green, never dominant. */
-function HeroLeaves() {
-  return (
-    <svg
-      viewBox="0 0 220 160"
-      aria-hidden="true"
-      className="pointer-events-none absolute -end-4 bottom-0 top-0 hidden h-full w-auto text-field-500/40 md:block dark:text-field-400/30"
-    >
-      <g fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-        <path d="M150 160 C 150 110, 160 70, 185 35" />
-        <path d="M150 160 C 135 120, 120 95, 95 70" />
-        <path d="M185 120 C 200 110, 210 95, 212 75" />
-      </g>
-      <g fill="currentColor">
-        <path d="M185 35 C 165 30, 150 40, 148 58 C 168 62, 182 52, 185 35 Z" />
-        <path d="M188 60 C 205 52, 216 56, 220 70 C 205 80, 192 75, 188 60 Z" />
-        <path d="M95 70 C 80 58, 62 58, 50 68 C 60 84, 80 86, 95 70 Z" />
-        <path d="M118 100 C 105 88, 88 88, 76 98 C 86 113, 105 115, 118 100 Z" />
-        <path d="M170 95 C 158 82, 140 82, 128 92 C 138 108, 157 110, 170 95 Z" />
-      </g>
-    </svg>
-  );
 }
 
 /**
@@ -63,7 +39,7 @@ function HeroLeaves() {
 export function DashboardPage() {
   const { district } = useAppSettings();
   const { user } = useAuth();
-  const { t } = useT();
+  const { t, lang } = useT();
   usePageTitle('Dashboard');
 
   const { data, status, retry } = useDashboard();
@@ -75,59 +51,91 @@ export function DashboardPage() {
   const crops = [...new Set(fields.map((f) => f.crop).filter(Boolean))];
   const totalAreaHa = fields.reduce((sum, f) => sum + (f.area_ha ?? 0), 0);
   const latestScan = data?.recent_activity?.last_scan;
-  const healthyCount = latestScan?.is_healthy ? fields.length : Math.max(fields.length - 1, 0);
+  // Honest crop status from the one real signal we have — the latest leaf
+  // scan. Missing data shows as "Unchecked", never as a fabricated count of
+  // "healthy fields" inferred from an unrelated scan.
+  const cropStatus = !latestScan
+    ? { value: t('home.statusUnchecked'), sub: t('home.tapToCheck'), tone: 'neutral' }
+    : latestScan.is_healthy
+      ? {
+          value: t('home.scanHealthy'),
+          sub: latestScan.scanned_at ? relativeTime(latestScan.scanned_at, lang) : t('home.cropHealthSubtitle'),
+          tone: 'leaf',
+        }
+      : { value: t('home.statusAttention'), sub: latestScan.disease || t('home.needsAttention'), tone: 'sun' };
   const weather = data?.weather?.current;
 
   return (
     <div className="flex animate-[fadeIn_0.4s_ease-out] flex-col gap-6 md:gap-7">
-      {/* Hero / welcome — the visual focal point: spacious, agricultural
-          gradient with a soft green light from the top-trailing corner. */}
-      <header className="relative overflow-hidden rounded-2xl border border-soil-200 bg-gradient-to-br from-soil-50 via-surface to-surface p-6 shadow-card md:p-9 dark:border-soil-200 dark:bg-[radial-gradient(130%_150%_at_88%_-30%,rgba(57,211,83,0.22),rgba(11,34,36,0.6)_45%,#0b2224_100%)]">
-        <div className="relative z-10 flex flex-wrap items-start justify-between gap-5">
+      {/* Welcome / greeting — dynamic user name, date and district preserved. */}
+      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-soil-900 md:text-3xl dark:text-soil-950">
+            {greetingKey(now, t)},{' '}
+            <span className="text-field-600 dark:text-field-400">{firstName}</span>{' '}
+            <span aria-hidden="true">🌱</span>
+          </h1>
+          <p className="mt-1 text-sm text-soil-600 dark:text-soil-600 md:text-base">
+            {t('home.subtitle')}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-xs font-medium text-soil-500 dark:text-soil-500">
+          <span className="inline-flex items-center gap-1.5">
+            <CalendarIcon className="h-3.5 w-3.5" aria-hidden="true" />
+            {formatDate(now, 'en')}
+          </span>
+          {districtEntry && (
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden="true">·</span>
+              <MapPinIcon className="h-3.5 w-3.5 text-field-600 dark:text-field-400" />
+              {districtName(districtEntry, 'en')}
+            </span>
+          )}
+        </div>
+      </header>
+
+      {/* Hero banner — premium agricultural field photograph with a navy
+          gradient overlay for legibility (reference design). */}
+      <section className="relative isolate overflow-hidden rounded-2xl border border-soil-200 shadow-card dark:border-soil-200">
+        <img
+          src={fieldHero}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 h-full w-full object-cover object-center"
+        />
+        {/* Navy scrim: strongest behind the text, easing toward the field. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 bg-gradient-to-r from-[#0B1220]/95 via-[#0B1220]/80 to-[#0B1220]/35"
+        />
+        <div className="flex flex-wrap items-center justify-between gap-5 p-6 md:p-9">
           <div className="min-w-0 max-w-xl">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-soil-500 dark:text-soil-500">
-              <span className="inline-flex items-center gap-1.5">
-                <CalendarIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                {formatDate(now, 'en')}
-              </span>
-              {districtEntry && (
-                <span className="inline-flex items-center gap-1.5">
-                  <span aria-hidden="true">·</span>
-                  <MapPinIcon className="h-3.5 w-3.5 text-field-600 dark:text-field-400" />
-                  {districtName(districtEntry, 'en')}
-                </span>
-              )}
-            </div>
-            <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight text-soil-900 md:text-4xl">
-              {greetingKey(now, t)},{' '}
-              <span className="text-field-600 dark:text-field-400">{firstName}!</span>{' '}
-              <span aria-hidden="true">🌱</span>
-            </h1>
-            <p className="mt-3 max-w-lg text-sm leading-relaxed text-soil-600 dark:text-soil-600 md:text-base">
-              {t('home.heroSubtitle')}
+            <h2 className="font-sans text-2xl font-bold leading-tight tracking-tight text-white md:text-3xl">
+              {t('home.heroTitle')}
+            </h2>
+            <p className="mt-2 max-w-lg text-sm leading-relaxed text-white/85 md:text-base">
+              {t('home.heroBannerSubtitle')}
             </p>
           </div>
 
-          {/* Total fields chip */}
+          {/* Total fields chip — preserved link + live count, restyled for the photo. */}
           <Link
             to="/fields"
-            className="group flex min-w-44 items-center gap-3 rounded-2xl border border-soil-200 bg-surface/70 p-4 shadow-card backdrop-blur-sm transition-colors duration-200 hover:border-field-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-500 dark:border-soil-200 dark:bg-[#0d2929]/70"
+            className="group flex min-w-44 items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-4 shadow-card backdrop-blur-md transition-colors duration-200 hover:border-field-400/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-400"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-field-100 text-field-700 dark:bg-gradient-to-br dark:from-field-500/25 dark:to-field-600/10 dark:text-field-300 dark:ring-1 dark:ring-inset dark:ring-field-500/25">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-field-500/20 text-field-300 ring-1 ring-inset ring-field-400/30">
               <SproutIcon className="h-5 w-5" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-xs font-medium text-soil-500 dark:text-soil-600">{t('nav.fields')}</span>
-              <span className="block font-display text-xl font-semibold text-soil-900 dark:text-soil-950">
+              <span className="block text-xs font-medium text-white/70">{t('nav.fields')}</span>
+              <span className="block font-display text-xl font-semibold text-white">
                 {status === 'success' ? fields.length : '—'}
               </span>
             </span>
-            <ChevronRightIcon className="h-4 w-4 shrink-0 text-soil-400 transition-transform duration-200 group-hover:translate-x-0.5 dark:text-soil-500 rtl:-scale-x-100" />
+            <ChevronRightIcon className="h-4 w-4 shrink-0 text-white/70 transition-transform duration-200 group-hover:translate-x-0.5 rtl:-scale-x-100" />
           </Link>
         </div>
-
-        <HeroLeaves />
-      </header>
+      </section>
 
       {/* KPI summary cards — real dashboard payload values */}
       <section aria-label={t('home.cropHealthTitle')}>
@@ -163,19 +171,19 @@ export function DashboardPage() {
                 label={t('home.kpiTotalArea')}
                 value={formatNumber(Number((totalAreaHa * 2.47105).toFixed(1)), 'en')}
                 unit={t('home.unitAcres')}
-                sub={`${fields.length} ${t('nav.fields').toLowerCase()}`}
+                sub={`${fields.length} ${fields.length === 1 ? t('home.fieldsOne') : t('home.fieldsMany')}`}
                 tone="teal"
                 showChevron
                 className="h-full"
               />
             </Link>
-            <Link to="/fields" className="rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-500 focus-visible:ring-offset-2">
+            <Link to="/diagnosis" className="rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-field-500 focus-visible:ring-offset-2">
               <StatCard
                 icon={CheckCircleIcon}
-                label={t('home.kpiHealthyFields')}
-                value={fields.length ? healthyCount : 0}
-                sub={fields.length ? `${fields.length - healthyCount} ${t('home.attentionNeeded')}` : t('home.addFirstFieldSub')}
-                tone="leaf"
+                label={t('home.kpiCropStatus')}
+                value={cropStatus.value}
+                sub={cropStatus.sub}
+                tone={cropStatus.tone}
                 showChevron
                 className="h-full"
               />
@@ -201,7 +209,6 @@ export function DashboardPage() {
         <div className="flex min-w-0 flex-col gap-6">
           <CropHealthOverview status={status} fields={data?.fields} latestScan={latestScan} onRetry={retry} />
           <AlertsWidget status={status} alerts={data?.alerts} onRetry={retry} />
-          <AiInsightsWidget insights={data?.ai_insights} />
           <WeatherNow status={status} weather={data?.weather} onRetry={retry} />
         </div>
         <div className="flex min-w-0 flex-col gap-6">

@@ -6,7 +6,13 @@ import { MapPinIcon } from '../ui/icons/MapPinIcon';
 import { SproutIcon } from '../ui/icons/SproutIcon';
 import { CATEGORY_ICONS, CATEGORY_LABELS, PRIORITY_TONES, PRIORITY_LABELS, STATUS_LABELS } from './recommendationPresentation';
 
-const formatDate = (date) => new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${date}T00:00:00`));
+// Recommendation dates can be empty; guard against Invalid Date crashes.
+const formatDate = (date) => {
+  if (!date) return 'No date';
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return 'No date';
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(parsed);
+};
 
 function DetailRow({ label, value, Icon }) {
   return (
